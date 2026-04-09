@@ -1,0 +1,146 @@
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.widget {
+  padding: 1.5rem;
+  border-radius: 20px;
+}
+
+.widget-time h2 {
+  font-size: 2.5rem;
+  margin: 0;
+  background: linear-gradient(to right, #fff, #a5b4fc);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.widget-time p {
+  margin: 5px 0 0;
+  color: #888;
+  font-size: 0.9rem;
+  text-transform: capitalize;
+}
+
+.widget-header h3 {
+  margin: 0 0 1.25rem;
+  font-size: 0.95rem;
+  color: #fff;
+  font-weight: 600;
+  opacity: 0.9;
+}
+
+.meters {
+  display: flex;
+  gap: 1.5rem;
+}
+
+.meter {
+  flex: 1;
+  text-align: center;
+}
+
+.circular-chart {
+  display: block;
+  margin: 0 auto 10px;
+  max-width: 70px;
+  max-height: 70px;
+}
+
+.circle-bg {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.05);
+  stroke-width: 2.8;
+}
+
+.circle {
+  fill: none;
+  stroke-width: 2.8;
+  stroke-linecap: round;
+  transition: stroke-dasharray 0.5s ease;
+}
+
+.percentage {
+  fill: #fff;
+  font-family: inherit;
+  font-size: 0.55rem;
+  font-weight: 700;
+  text-anchor: middle;
+}
+
+.meter-label {
+  font-size: 0.7rem;
+  color: #666;
+  line-height: 1.4;
+}
+
+.meter-label span {
+  color: #fff;
+  font-weight: 600;
+}
+
+.storage-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.disk-icon {
+  font-size: 1.5rem;
+  background: rgba(255, 255, 255, 0.05);
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+}
+
+.disk-details {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.badge-healthy {
+  font-size: 0.65rem;
+  background: rgba(74, 222, 128, 0.1);
+  color: #4ade80;
+  padding: 2px 6px;
+  border-radius: 4px;
+  width: fit-content;
+  font-weight: 700;
+}
+
+.disk-stats {
+  font-size: 0.75rem;
+  color: #888;
+  line-height: 1.4;
+}
+
+.progress-bar {
+  height: 6px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(to right, #38bdf8, #818cf8);
+  border-radius: 10px;
+}
+
+.network-stats {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  font-family: monospace;
+}
+
+.network-stats .up { color: #f472b6; }
+.network-stats .down { color: #38bdf8; }

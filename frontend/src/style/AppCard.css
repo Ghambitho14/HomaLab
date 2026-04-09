@@ -1,0 +1,144 @@
+.app-card {
+  position: relative;
+  height: 180px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  transition: transform 0.2s, background 0.2s;
+  cursor: pointer;
+  border-radius: 16px;
+}
+
+.app-card:hover {
+  transform: translateY(-5px);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.status-badge-container {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  pointer-events: none;
+}
+
+.status-badge {
+  font-size: 0.6rem; 
+  font-weight: 700;
+  padding: 2px 8px; 
+  border-radius: 4px;
+  text-transform: uppercase;
+}
+
+.status-badge.running {
+  background: rgba(74, 222, 128, 0.1); 
+  border: 1px solid #4ade8066;
+  color: #4ade80;
+}
+
+.status-badge.exited, 
+.status-badge.stopped {
+  background: rgba(255, 77, 77, 0.1); 
+  border: 1px solid #ff4d4d66;
+  color: #ff4d4d;
+}
+
+.app-icon-container {
+  width: 64px; 
+  height: 64px; 
+  border-radius: 16px; 
+  display: flex; 
+  align-items: center; 
+  justify-content: center; 
+  margin-bottom: 12px;
+  box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+}
+
+.app-info {
+  text-align: center;
+  width: 100%;
+}
+
+.app-name {
+  font-size: 0.95rem; 
+  font-weight: 600; 
+  color: #fff; 
+  overflow: hidden; 
+  text-overflow: ellipsis; 
+  white-space: nowrap;
+}
+
+.app-port {
+  font-size: 0.75rem; 
+  color: #888; 
+  margin-top: 2px;
+}
+
+.app-menu-container {
+  position: absolute; 
+  top: 8px; 
+  right: 8px; 
+  z-index: 100;
+}
+
+.menu-dots-btn {
+  background: transparent; 
+  border: none; 
+  color: #666; 
+  font-size: 1.2rem; 
+  padding: 4px 8px; 
+  cursor: pointer; 
+  border-radius: 4px;
+}
+
+.menu-dots-btn:hover {
+  color: #fff;
+  background: rgba(255,255,255,0.05);
+}
+
+.dropdown-menu {
+  position: absolute; 
+  right: 0; 
+  top: 30px; 
+  width: 190px; 
+  background: rgba(20, 25, 35, 0.98); 
+  border: 1px solid rgba(255,255,255,0.1); 
+  border-radius: 12px; 
+  padding: 8px; 
+  box-shadow: 0 12px 48px rgba(0,0,0,0.7); 
+  backdrop-filter: blur(20px); 
+  z-index: 1000;
+}
+
+.menu-item {
+  width: 100%; 
+  text-align: left; 
+  padding: 10px 12px; 
+  background: transparent; 
+  border: none; 
+  color: #fff; 
+  font-size: 0.85rem; 
+  cursor: pointer; 
+  border-radius: 8px;
+  transition: background 0.2s;
+}
+
+.menu-item:hover {
+  background: rgba(255,255,255,0.05);
+}
+
+.menu-item.toggle-btn {
+  font-weight: 600;
+}
+
+.menu-item.delete-btn {
+  color: #ff4d4d;
+  font-weight: 600;
+}
+
+.menu-divider {
+  height: 1px; 
+  background: rgba(255,255,255,0.08); 
+  margin: 6px 0;
+}

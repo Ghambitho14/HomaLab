@@ -1,0 +1,2 @@
+// Configuración del Backend
+export const BACKEND_URL = `http://${window.location.hostname}:3001`;
