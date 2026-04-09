@@ -2,11 +2,11 @@ import React from 'react';
 import { useAppLogic } from './utils/useAppLogic';
 
 // UI Components
-import Navbar from './Components/Navbar.jsx';
-import SearchBar from './Components/SearchBar.jsx';
-import AppCard from './Components/AppCard.jsx';
-import Sidebar from './Components/Sidebar.jsx';
-import Modals from './Components/Modals.jsx';
+import Navbar from './components/Navbar.jsx';
+import SearchBar from './components/SearchBar.jsx';
+import AppCard from './components/AppCard.jsx';
+import Sidebar from './components/Sidebar.jsx';
+import Modals from './components/Modals.jsx';
 
 // Styles
 import './App.css';
