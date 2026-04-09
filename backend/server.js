@@ -148,62 +148,140 @@ setInterval(async () => {
 }, 2000); // Actualiza cada 2 segundos para no ahogar la máquina
 
 // ==========================================
-// BACKGROUND TASK: Ticker de Contenedores Docker (Stateless)
+// BACKGROUND TASK: Ticker de Contenedores Docker + Auto-Descubrimiento (Stateless)
 // ==========================================
+let nativeApps = [];
+
+// Intervalo separado para descubrimiento de servicios nativos (más pesado, cada 10s)
+setInterval(async () => {
+  try {
+    const connections = await si.networkConnections();
+    const processes = await si.processes();
+    const found = [];
+
+    // 1. Detectar Coolify (Puerto 8000 o procesos relacionados)
+    const hasCoolifyProc = processes.list.some(p => p.name.toLowerCase().includes('coolify'));
+    const hasCoolifyPort = connections.some(c => c.localPort === 8000 && c.state === 'LISTEN');
+    
+    if (hasCoolifyProc || hasCoolifyPort) {
+      found.push({
+        id: 'native-coolify',
+        name: 'Coolify',
+        rawName: 'coolify',
+        status: 'running',
+        port: '8000',
+        image: 'native-service',
+        isManaged: false,
+        isSystem: true,
+        category: 'Infraestructura',
+        type: 'native'
+      });
+    }
+
+    // 2. Detectar otros servicios comunes (ej: Nginx nativo)
+    const hasNginx = processes.list.some(p => p.name.toLowerCase() === 'nginx');
+    if (hasNginx) {
+      found.push({
+        id: 'native-nginx',
+        name: 'Nginx Local',
+        rawName: 'nginx',
+        status: 'running',
+        port: '80',
+        image: 'native-service',
+        isManaged: false,
+        isSystem: true,
+        category: 'Sistema',
+        type: 'native'
+      });
+    }
+
+    // 3. Detectar cualquier servicio escuchando en puertos comunes no mapeados
+    const commonPorts = [3000, 5000, 8080, 8443];
+    commonPorts.forEach(port => {
+      const conn = connections.find(c => c.localPort === port && c.state === 'LISTEN');
+      if (conn && !found.some(f => f.port == port)) {
+        found.push({
+          id: `native-port-${port}`,
+          name: `Servicio Puerto ${port}`,
+          rawName: `port-${port}`,
+          status: 'running',
+          port: port.toString(),
+          image: 'unknown',
+          isManaged: false,
+          isSystem: false,
+          category: 'Sistema',
+          type: 'native'
+        });
+      }
+    });
+
+    nativeApps = found;
+  } catch (error) {
+    console.error('[Discovery Error]', error.message);
+  }
+}, 10000);
+
+// Intervalo principal para enviar todo al cliente (cada 2s)
 setInterval(async () => {
   try {
     const containers = await docker.listContainers({ all: true });
     
     // Transformar los contenedores al formato que espera nuestro panel Grid
-    const mappedApps = containers.map(container => {
-      // 1. Obtener nombre del proyecto (Docker Compose)
+    const mappedContainers = containers.map(container => {
       const projectName = container.Labels ? container.Labels['com.docker.compose.project'] : null;
-      
-      // 2. Definir rawName (nombre interno de la carpeta)
-      // Intentamos con el proyecto de compose, si no con el nombre del contenedor limpio
       const containerRawName = container.Names[0].replace('/', '').replace(/_[0-9]+$/, '');
       const rawName = projectName || containerRawName;
 
-      // 3. Priorizar la etiqueta 'homelab.name' o limpiar el nombre del contenedor
       let displayName = container.Labels && container.Labels['homelab.name'];
       if (!displayName) {
         displayName = rawName.replace(/-/g, ' ').replace(/_/g, ' ');
       }
 
-      // 4. MEJORADO: Verificar si es gestionada (insensible a mayúsculas/minúsculas)
       const appsInDir = fs.readdirSync(APPS_DIR);
       const isManaged = appsInDir.some(dir => 
         dir.toLowerCase() === rawName.toLowerCase() || 
         dir.toLowerCase() === containerRawName.toLowerCase()
       );
       
-      // Intentar encontrar el nombre real de la carpeta si es gestionada
       const actualDirName = isManaged ? appsInDir.find(dir => 
         dir.toLowerCase() === rawName.toLowerCase() || 
         dir.toLowerCase() === containerRawName.toLowerCase()
       ) : rawName;
 
-      // 5. Buscar el puerto host
       let hostPort = 'n/a';
       if (container.Ports && container.Ports.length > 0) {
         const publicPortDef = container.Ports.find(p => p.PublicPort);
         if (publicPortDef) hostPort = publicPortDef.PublicPort.toString();
       }
 
+      // Definir Categoría
+      let category = 'Docker';
+      const isInfra = displayName.toLowerCase().includes('docker-control') || 
+                      displayName.toLowerCase().includes('portainer') ||
+                      displayName.toLowerCase().includes('traefik') ||
+                      displayName.toLowerCase().includes('nginx');
+      
+      if (isInfra) category = 'Infraestructura';
+
       return {
         id: container.Id.substring(0, 12),
         name: displayName,
-        rawName: actualDirName, // Usamos el nombre real de la carpeta encontrada
+        rawName: actualDirName,
         status: container.State === 'running' ? 'running' : 'stopped',
         port: hostPort,
         image: container.Image,
         isManaged: isManaged,
-        isSystem: displayName.includes('docker-control') || displayName.includes('portainer')
+        isSystem: isInfra,
+        category: category,
+        type: 'docker'
       };
     });
 
-    // Emisión estado stateless completo a cada cliente conectado
-    io.emit('docker-containers', mappedApps);
+    // Combinar contenedores con apps nativas detectadas
+    const allApps = [...mappedContainers, ...nativeApps];
+
+    // Emisión estado stateless completo
+    io.emit('docker-containers', allApps);
   } catch (error) {
     console.error('[Docker Error]', error.message);
     io.emit('docker-error', 'El Node no puede comunicarse con Docker Daemon. ¿Está Docker corriendo y con permisos?');

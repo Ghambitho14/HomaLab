@@ -50,28 +50,36 @@ const AppCard = ({
 
         {activeMenuId === app.id && (
           <div className="dropdown-menu glass-panel">
-            <button className="menu-item toggle-btn" onClick={(e) => { setActiveMenuId(null); toggleStatus(app.id, app.status, e); }}>
-              {app.status === 'running' ? '⏹ Detener App' : '▶ Iniciar App'}
-            </button>
-            
-            {app.isManaged && (
-              <button 
-                className="menu-item" 
-                onClick={(e) => { setActiveMenuId(null); openEdit(app.name, app.rawName, e); }}
-              >
-                ⚙️ Configurar / Editar
-              </button>
+            {app.type === 'docker' ? (
+              <>
+                <button className="menu-item toggle-btn" onClick={(e) => { setActiveMenuId(null); toggleStatus(app.id, app.status, e); }}>
+                  {app.status === 'running' ? '⏹ Detener App' : '▶ Iniciar App'}
+                </button>
+                
+                {app.isManaged && (
+                  <button 
+                    className="menu-item" 
+                    onClick={(e) => { setActiveMenuId(null); openEdit(app.name, app.rawName, e); }}
+                  >
+                    ⚙️ Configurar / Editar
+                  </button>
+                )}
+                
+                <button className="menu-item" onClick={(e) => { setActiveMenuId(null); openLogs(app.id, app.name, e); }}>
+                  📋 Ver Logs en Vivo
+                </button>
+                
+                <div className="menu-divider"></div>
+                
+                <button className="menu-item delete-btn" onClick={(e) => { setActiveMenuId(null); deleteApp(app.id, app.name, e); }}>
+                  🗑 Eliminar Aplicación
+                </button>
+              </>
+            ) : (
+              <div style={{ padding: '4px 8px', fontSize: '0.75rem', color: '#666', fontStyle: 'italic' }}>
+                Este es un servicio nativo del sistema. Gestiona Coolify desde su panel original.
+              </div>
             )}
-            
-            <button className="menu-item" onClick={(e) => { setActiveMenuId(null); openLogs(app.id, app.name, e); }}>
-              📋 Ver Logs en Vivo
-            </button>
-            
-            <div className="menu-divider"></div>
-            
-            <button className="menu-item delete-btn" onClick={(e) => { setActiveMenuId(null); deleteApp(app.id, app.name, e); }}>
-              🗑 Eliminar Aplicación
-            </button>
           </div>
         )}
       </div>

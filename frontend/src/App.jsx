@@ -32,42 +32,55 @@ function App() {
               setSearchQuery={logic.setSearchQuery} 
             />
 
-            {/* Apps Section */}
-            <div className="apps-section">
-              <div className="apps-header">
-                <h2>Contenedores ({logic.filteredApps.length})</h2>
-                <button 
-                  className="add-app-btn" 
-                  onClick={() => logic.setIsInstallModalOpen(true)}
-                >
-                  +
-                </button>
-              </div>
+            {/* Apps Sections grouped by category */}
+            <div className="apps-container">
+              {Object.entries(
+                logic.filteredApps.reduce((acc, app) => {
+                  const cat = app.category || 'Otros';
+                  if (!acc[cat]) acc[cat] = [];
+                  acc[cat].push(app);
+                  return acc;
+                }, {})
+              ).map(([category, apps]) => (
+                <div key={category} className="category-section">
+                  <div className="apps-header">
+                    <h2>{category} ({apps.length})</h2>
+                    {category === 'Docker' && (
+                      <button 
+                        className="add-app-btn" 
+                        onClick={() => logic.setIsInstallModalOpen(true)}
+                      >
+                        +
+                      </button>
+                    )}
+                  </div>
+                  
+                  <div className="apps-grid">
+                    {apps.map(app => (
+                      <AppCard 
+                        key={app.id}
+                        app={app}
+                        activeMenuId={logic.activeMenuId}
+                        setActiveMenuId={logic.setActiveMenuId}
+                        toggleStatus={logic.toggleStatus}
+                        openEdit={logic.openEdit}
+                        openLogs={logic.openLogs}
+                        deleteApp={logic.deleteApp}
+                      />
+                    ))}
+                  </div>
+                </div>
+              ))}
 
               {logic.filteredApps.length === 0 && !logic.dockerError && (
                 <div className="empty-state glass-panel blur-medium">
                   <p>
                     {logic.connected 
-                      ? '🐳 No hay contenedores Docker en ejecución' 
+                      ? '🐳 No hay aplicaciones detectadas' 
                       : '⏳ Conectando al servidor...'}
                   </p>
                 </div>
               )}
-              
-              <div className="apps-grid">
-                {logic.filteredApps.map(app => (
-                  <AppCard 
-                    key={app.id}
-                    app={app}
-                    activeMenuId={logic.activeMenuId}
-                    setActiveMenuId={logic.setActiveMenuId}
-                    toggleStatus={logic.toggleStatus}
-                    openEdit={logic.openEdit}
-                    openLogs={logic.openLogs}
-                    deleteApp={logic.deleteApp}
-                  />
-                ))}
-              </div>
             </div>
           </main>
         </div>
