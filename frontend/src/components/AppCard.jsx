@@ -1,5 +1,5 @@
 import React from 'react';
-import AppIcon from './AppIcon';
+import AppIcon from './AppIcon.jsx';
 import { getAppColor } from '../utils/appHelpers';
 import '../style/AppCard.css';
 
