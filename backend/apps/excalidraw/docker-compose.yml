@@ -1,0 +1,8 @@
+services:
+  excalidraw:
+    image: excalidraw/excalidraw:latest
+    ports:
+      - '8081:80'
+    restart: unless-stopped
+    labels:
+      homelab.name: excalidraw
