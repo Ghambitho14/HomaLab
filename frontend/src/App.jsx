@@ -11,17 +11,33 @@ import Modals from './components/Modals.jsx';
 // Styles
 import './App.css';
 
+import { BACKEND_URL } from './utils/constants';
+
 function App() {
   const logic = useAppLogic();
 
+  const wallpaperUrl = logic.wallpaper?.startsWith('/') 
+    ? `${BACKEND_URL}${logic.wallpaper}` 
+    : logic.wallpaper;
+
+  const appStyle = {
+    backgroundImage: wallpaperUrl ? `url(${wallpaperUrl})` : 'none',
+    backgroundSize: 'cover',
+    backgroundPosition: 'center',
+    backgroundAttachment: 'fixed',
+    transition: 'background-image 0.5s ease-in-out'
+  };
+
   return (
-    <div className="app-wrapper">
+    <div className="app-wrapper" style={appStyle}>
       <div className="layout">
         <div className="main-wrapper">
           {/* Top Navbar */}
           <Navbar 
             connected={logic.connected} 
             dockerError={logic.dockerError} 
+            onOpenSettings={() => logic.setIsSettingsModalOpen(true)}
+            dashboardName={logic.dashboardName}
           />
 
           {/* Main Content Area */}

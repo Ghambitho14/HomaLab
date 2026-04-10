@@ -1,2 +1,3 @@
-// Configuración del Backend
-export const BACKEND_URL = `http://${window.location.hostname}:3001`;
+// Configuración del Backend Dinámica
+const savedApiPort = localStorage.getItem('homelab_api_port') || '3001';
+export const BACKEND_URL = `http://${window.location.hostname}:${savedApiPort}`;

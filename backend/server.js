@@ -10,12 +10,33 @@ const yaml = require('js-yaml');
 const { execSync } = require('child_process');
 require('dotenv').config();
 
+const multer = require('multer');
+
 const app = express();
 const server = http.createServer(app);
 
-// Directorio para apps
+// Directorios necesarios
 const APPS_DIR = path.join(__dirname, 'apps');
+const UPLOADS_DIR = path.join(__dirname, 'uploads/backgrounds');
+const SETTINGS_FILE = path.join(__dirname, 'settings.json');
+
 if (!fs.existsSync(APPS_DIR)) fs.mkdirSync(APPS_DIR);
+if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+
+// Configuración de Multer para wallpapers
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, UPLOADS_DIR);
+  },
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname);
+    cb(null, `wallpaper_${Date.now()}${ext}`);
+  }
+});
+const upload = multer({ 
+  storage,
+  limits: { fileSize: 10 * 1024 * 1024 } // Límite 10MB
+});
 
 // Initialize Socket.io with CORS supporting our local Vite frontend
 const io = new Server(server, {
@@ -27,6 +48,124 @@ const io = new Server(server, {
 
 app.use(cors());
 app.use(express.json());
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+// ==========================================
+// ENDPOINTS: Ajustes y Personalización
+// ==========================================
+
+app.get('/settings', (req, res) => {
+  try {
+    if (fs.existsSync(SETTINGS_FILE)) {
+      const settings = JSON.parse(fs.readFileSync(SETTINGS_FILE));
+      res.json(settings);
+    } else {
+      res.json({ 
+        wallpaper: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=2564&auto=format&fit=crop", 
+        isLocal: false,
+        dashboardName: "HomaLab",
+        serverPort: 3001
+      });
+    }
+  } catch (err) {
+    res.status(500).json({ error: 'Error al leer ajustes' });
+  }
+});
+
+app.post('/settings/upload', upload.single('wallpaper'), (req, res) => {
+  console.log('[Upload] Procesando archivo:', req.file ? req.file.originalname : 'NINGUNO');
+  
+  if (!req.file) {
+    console.error('[Upload Error] No se recibió el archivo en req.file');
+    return res.status(400).json({ error: 'No se subió ningún archivo' });
+  }
+  
+  try {
+    const current = fs.existsSync(SETTINGS_FILE) ? JSON.parse(fs.readFileSync(SETTINGS_FILE)) : {};
+    const wallpaperUrl = `/uploads/backgrounds/${req.file.filename}`;
+    const newSettings = { ...current, wallpaper: wallpaperUrl, isLocal: true };
+    
+    fs.writeFileSync(SETTINGS_FILE, JSON.stringify(newSettings, null, 2));
+    console.log('[Upload Success] Nuevo fondo guardado en settings:', wallpaperUrl);
+    res.json({ message: 'Fondo de pantalla actualizado', wallpaper: wallpaperUrl });
+  } catch (err) {
+    console.error('[Upload Error] Error al guardar en settings.json:', err.message);
+    res.status(500).json({ error: 'Error al guardar ajustes' });
+  }
+});
+
+app.post('/settings/general', (req, res) => {
+  const { dashboardName, serverPort, frontendPort } = req.body;
+  console.log('[Settings] Petición de cambio recibida:', { dashboardName, serverPort, frontendPort });
+  
+  try {
+    const current = fs.existsSync(SETTINGS_FILE) ? JSON.parse(fs.readFileSync(SETTINGS_FILE)) : {};
+    const oldServerPort = current.serverPort || 3001;
+    const oldFrontendPort = current.frontendPort || 5173;
+    
+    const newSettings = { 
+      ...current, 
+      dashboardName: dashboardName || current.dashboardName || "HomaLab", 
+      serverPort: parseInt(serverPort) || 3001,
+      frontendPort: parseInt(frontendPort) || 5173
+    };
+    
+    // Guardar en settings.json
+    fs.writeFileSync(SETTINGS_FILE, JSON.stringify(newSettings, null, 2));
+    console.log('[Settings] Archivo settings.json actualizado con éxito');
+    
+    // 1. Actualizar vite.config.js si cambió el puerto del frontend
+    if (oldFrontendPort != frontendPort) {
+      const viteConfigPath = path.join(__dirname, '../frontend/vite.config.js');
+      if (fs.existsSync(viteConfigPath)) {
+        let content = fs.readFileSync(viteConfigPath, 'utf8');
+        console.log('[Settings] Actualizando puerto en vite.config.js...');
+        if (content.includes('port:')) {
+          content = content.replace(/port:\s*\d+/, `port: ${frontendPort}`);
+        } else if (content.includes('server: {')) {
+          content = content.replace(/server:\s*{/, `server: {\n    port: ${frontendPort},`);
+        } else {
+          // Si no hay bloque server, lo creamos (esto es más raro pero por si acaso)
+          content = content.replace(/defineConfig\({/, `defineConfig({\n  server: { port: ${frontendPort} },`);
+        }
+        fs.writeFileSync(viteConfigPath, content);
+        console.log(`[!] Puerto de Vite actualizado a ${frontendPort}`);
+      }
+    }
+
+    const portChanged = oldServerPort != serverPort;
+    
+    res.json({ 
+      success: true,
+      message: portChanged ? 'Restaurando conexión... El servidor está cambiando al nuevo puerto.' : 'Ajustes guardados correctamente',
+      restartRequested: portChanged
+    });
+
+    if (portChanged) {
+      console.log(`[RESTART] Cambiando puerto de ${oldServerPort} a ${serverPort}. Saliendo en 1s...`);
+      setTimeout(() => {
+        console.log('[RESTART] Ejecutando exit para reinicio de nodemon.');
+        process.exit(0);
+      }, 1000);
+    }
+  } catch (err) {
+    console.error('[Settings Error] Fallo crítico al guardar ajustes:', err);
+    res.status(500).json({ error: 'Fallo al guardar ajustes en el disco' });
+  }
+});
+
+app.post('/settings/reset', (req, res) => {
+  try {
+    const current = fs.existsSync(SETTINGS_FILE) ? JSON.parse(fs.readFileSync(SETTINGS_FILE)) : {};
+    const originalWallpaper = "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=2564&auto=format&fit=crop";
+    const newSettings = { ...current, wallpaper: originalWallpaper, isLocal: false };
+    
+    fs.writeFileSync(SETTINGS_FILE, JSON.stringify(newSettings, null, 2));
+    res.json({ message: 'Fondo de pantalla restablecido', wallpaper: originalWallpaper });
+  } catch (err) {
+    res.status(500).json({ error: 'Error al restablecer ajustes' });
+  }
+});
 
 // ==========================================
 // ENDPOINT: Instalación de Apps (HTTP)
@@ -465,7 +604,16 @@ io.on('connection', (socket) => {
 });
 
 // Iniciamos el Servidor
-const PORT = process.env.PORT || 3001;
-server.listen(PORT, () => {
-  console.log(`🚀 Docker Control Panel API + WebSocket corriendo en el puerto ${PORT}`);
+let appPort = process.env.PORT || 3001;
+
+// Cargar puerto desde ajustes si existe
+if (fs.existsSync(SETTINGS_FILE)) {
+  try {
+    const settings = JSON.parse(fs.readFileSync(SETTINGS_FILE));
+    if (settings.serverPort) appPort = settings.serverPort;
+  } catch(e) {}
+}
+
+server.listen(appPort, () => {
+  console.log(`🚀 HomaLab Dashboard corriendo en el puerto ${appPort}`);
 });

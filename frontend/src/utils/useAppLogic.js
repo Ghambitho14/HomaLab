@@ -13,6 +13,13 @@ export const useAppLogic = () => {
   const [connected, setConnected] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [time, setTime] = useState(new Date());
+  
+  // Ajustes de Personalización y Generales
+  const [wallpaper, setWallpaper] = useState('');
+  const [dashboardName, setDashboardName] = useState('HomaLab');
+  const [serverPort, setServerPort] = useState(3001);
+  const [frontendPort, setFrontendPort] = useState(5173);
+  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
 
   // Estado para el menú desplegable (3 puntos)
   const [activeMenuId, setActiveMenuId] = useState(null);
@@ -60,6 +67,100 @@ export const useAppLogic = () => {
 
     return () => socket.disconnect();
   }, []);
+
+  // Cargar ajustes al inicio
+  useEffect(() => {
+    fetch(`${BACKEND_URL}/settings`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.wallpaper) setWallpaper(data.wallpaper);
+        if (data.dashboardName) setDashboardName(data.dashboardName);
+        if (data.serverPort) setServerPort(data.serverPort);
+        if (data.frontendPort) setFrontendPort(data.frontendPort);
+      })
+      .catch(err => console.error('Error cargando ajustes:', err));
+  }, []);
+
+  const handleSaveGeneralSettings = async (name, port, fPort) => {
+    try {
+      console.log(`[Settings] Intentando guardar con BACKEND_URL: ${BACKEND_URL}`);
+      
+      const res = await fetch(`${BACKEND_URL}/settings/general`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          dashboardName: name, 
+          serverPort: port,
+          frontendPort: fPort
+        })
+      });
+      
+      const data = await res.json();
+      
+      if (res.ok) {
+        // SOLO ahora que el servidor confirmó recepción lo guardamos localmente
+        localStorage.setItem('homelab_api_port', port);
+        
+        setDashboardName(name);
+        setServerPort(port);
+        setFrontendPort(fPort);
+        
+        if (data.restartRequested) {
+          alert("🚀 ¡Ajustes guardados! El servidor se está reiniciando en el nuevo puerto. La página se recargará en 3 segundos.");
+          setTimeout(() => window.location.reload(), 3000);
+        } else {
+          alert("✅ Ajustes guardados correctamente");
+        }
+        return true;
+      } else {
+        alert("❌ Error del servidor: " + (data.error || "Desconocido"));
+      }
+    } catch (err) {
+      console.error('[Fetch Error]', err);
+      alert("❌ Fallo de conexión. Verifica que el servidor esté corriendo en el puerto actual o usa el botón de emergencia 'Resetear Conexión'.");
+    }
+    return false;
+  };
+
+  const handleResetConnection = () => {
+    localStorage.removeItem('homelab_api_port');
+    alert("🔄 Puerto local reseteado a 3001. Recargando...");
+    window.location.reload();
+  };
+
+  const handleWallpaperUpload = async (file) => {
+    const formData = new FormData();
+    formData.append('wallpaper', file);
+    
+    try {
+      const res = await fetch(`${BACKEND_URL}/settings/upload`, {
+        method: 'POST',
+        body: formData
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setWallpaper(data.wallpaper);
+        return true;
+      } else {
+        alert('❌ Error: ' + data.error);
+      }
+    } catch (err) {
+      alert('❌ Error de conexión al subir imagen');
+    }
+    return false;
+  };
+
+  const handleResetWallpaper = async () => {
+    try {
+      const res = await fetch(`${BACKEND_URL}/settings/reset`, { method: 'POST' });
+      const data = await res.json();
+      if (res.ok) {
+        setWallpaper(data.wallpaper);
+      }
+    } catch (err) {
+      alert('❌ Error al restablecer fondo');
+    }
+  };
 
   const openEdit = async (displayName, rawName, e) => {
     e.stopPropagation();
@@ -185,6 +286,11 @@ export const useAppLogic = () => {
     connected,
     searchQuery, setSearchQuery,
     time,
+    wallpaper, setWallpaper,
+    dashboardName, setDashboardName,
+    serverPort, setServerPort,
+    frontendPort, setFrontendPort,
+    isSettingsModalOpen, setIsSettingsModalOpen,
     activeMenuId, setActiveMenuId,
     installName, setInstallName,
     installPort, setInstallPort,
@@ -200,9 +306,12 @@ export const useAppLogic = () => {
     handleDeploy,
     toggleStatus,
     deleteApp,
-    openLogs,
-    closeLogs,
     openEdit,
+    handleWallpaperUpload,
+    handleResetWallpaper,
+    handleSaveGeneralSettings,
+    handleResetConnection,
+    BACKEND_URL,
     filteredApps
   };
 };

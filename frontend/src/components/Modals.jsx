@@ -13,10 +13,131 @@ const Modals = ({
   editFriendlyName, setEditFriendlyName,
   editPort, setEditPort,
   editCompose, setEditCompose,
-  isUpdating, handleUpdate
+  isUpdating, handleUpdate,
+  isSettingsModalOpen, setIsSettingsModalOpen,
+  handleWallpaperUpload, handleResetWallpaper,
+  wallpaper, BACKEND_URL,
+  dashboardName, setDashboardName,
+  serverPort, setServerPort,
+  frontendPort, setFrontendPort,
+  handleSaveGeneralSettings,
+  handleResetConnection
 }) => {
   return (
     <>
+      {/* Settings Modal */}
+      <div className={`modal-overlay ${isSettingsModalOpen ? 'open' : ''}`}>
+        <div className="modal-content glass-panel blur-heavy settings-modal" style={{ maxWidth: '450px' }}>
+          <div className="modal-header">
+            <h3>⚙️ Ajustes de HomaLab</h3>
+            <button className="close-btn" onClick={() => setIsSettingsModalOpen(false)}>×</button>
+          </div>
+          <div className="modal-body" style={{ maxHeight: '80vh' }}>
+            <div className="settings-section">
+              <h4>Personalización</h4>
+              <p className="settings-desc">Cambia el fondo de pantalla de tu dashboard.</p>
+              
+              <div className="wallpaper-preview" style={{ 
+                height: '100px', 
+                borderRadius: '12px', 
+                background: `url(${wallpaper?.startsWith('/') ? BACKEND_URL + wallpaper : wallpaper}) center/cover`,
+                marginBottom: '1rem',
+                border: '1px solid rgba(255,255,255,0.1)'
+              }}></div>
+
+              <div className="upload-zone" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+                <label className="btn btn-secondary" style={{ cursor: 'pointer', fontSize: '0.8rem' }}>
+                  📁 Subir
+                  <input 
+                    type="file" 
+                    accept="image/*" 
+                    style={{ display: 'none' }} 
+                    onChange={(e) => {
+                      if (e.target.files[0]) {
+                        handleWallpaperUpload(e.target.files[0]);
+                      }
+                    }}
+                  />
+                </label>
+                <button 
+                  className="btn btn-danger" 
+                  style={{ fontSize: '0.8rem' }}
+                  onClick={handleResetWallpaper}
+                >
+                  ↩️ Reset
+                </button>
+              </div>
+            </div>
+
+            <div className="settings-section" style={{ marginTop: '2rem', paddingTop: '1.5rem', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                <h4 style={{ margin: 0 }}>Identidad y Red</h4>
+                <div style={{ fontSize: '0.7rem', padding: '4px 8px', background: 'rgba(255,255,255,0.05)', borderRadius: '6px', color: 'rgba(255,255,255,0.6)' }}>
+                  📡 API: {BACKEND_URL}
+                </div>
+              </div>
+              <p className="settings-desc">Configura cómo se identifica y conecta tu HomaLab.</p>
+              
+              <div className="form-group" style={{ marginBottom: '1rem' }}>
+                <label>Nombre del Sistema</label>
+                <input 
+                  type="text" 
+                  value={dashboardName} 
+                  onChange={(e) => setDashboardName(e.target.value)} 
+                  placeholder="Ej. Mi HomaLab"
+                />
+              </div>
+
+              <div className="form-row" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+                <div className="form-group">
+                  <label>Puerto Web (Vite)</label>
+                  <input 
+                    type="number" 
+                    value={frontendPort} 
+                    onChange={(e) => setFrontendPort(e.target.value)} 
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Puerto API (Server)</label>
+                  <input 
+                    type="number" 
+                    value={serverPort} 
+                    onChange={(e) => setServerPort(e.target.value)} 
+                  />
+                </div>
+              </div>
+
+              <div className="form-group" style={{ marginBottom: '1rem' }}>
+                <span className="tip" style={{ display: 'block', marginTop: '0.5rem', marginLeft: 0, fontSize: '0.7rem', color: '#ffbd2e' }}>
+                  ⚠️ Cambiar puertos reiniciará las apps y podría requerir recarga manual.
+                </span>
+              </div>
+
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <button 
+                  className="btn btn-primary" 
+                  style={{ flex: 2, padding: '12px' }}
+                  onClick={() => handleSaveGeneralSettings(dashboardName, serverPort, frontendPort)}
+                >
+                  💾 Guardar Cambios
+                </button>
+                <button 
+                  className="btn btn-danger" 
+                  style={{ flex: 1, padding: '12px', fontSize: '0.8rem' }}
+                  onClick={handleResetConnection}
+                  title="Si pierdes la conexión, haz clic aquí para volver al puerto 3001"
+                >
+                  🆘 Reset Local
+                </button>
+              </div>
+            </div>
+          </div>
+          <div className="modal-footer">
+            <button className="btn btn-secondary" style={{ width: '100%' }} onClick={() => setIsSettingsModalOpen(false)}>Cerrar</button>
+          </div>
+        </div>
+      </div>
+
       {/* Install Modal */}
       <div className={`modal-overlay ${isInstallModalOpen ? 'open' : ''}`}>
         <div className="modal-content glass-panel blur-heavy install-modal">
