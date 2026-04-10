@@ -21,7 +21,8 @@ const Modals = ({
   serverPort, setServerPort,
   frontendPort, setFrontendPort,
   handleSaveGeneralSettings,
-  handleResetConnection
+  handleResetConnection,
+  zoomLevel, handleZoomChange
 }) => {
   return (
     <>
@@ -34,6 +35,35 @@ const Modals = ({
           </div>
           <div className="modal-body" style={{ maxHeight: '80vh' }}>
             <div className="settings-section">
+              <h4>Visualización</h4>
+              <p className="settings-desc">Ajusta el tamaño de la interfaz (Zoom).</p>
+              
+              <div className="zoom-control" style={{ 
+                background: 'rgba(255,255,255,0.05)', 
+                padding: '1rem', 
+                borderRadius: '12px',
+                marginBottom: '1rem'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                  <span style={{ fontSize: '0.8rem', opacity: 0.7 }}>Escala:</span>
+                  <span style={{ fontSize: '0.9rem', fontWeight: 'bold', color: '#38bdf8' }}>{zoomLevel}%</span>
+                </div>
+                <input 
+                  type="range" 
+                  min="50" 
+                  max="150" 
+                  step="5"
+                  value={zoomLevel} 
+                  onChange={(e) => handleZoomChange(parseInt(e.target.value))}
+                  style={{ width: '100%', cursor: 'pointer', accentColor: '#38bdf8' }}
+                />
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.3rem', fontSize: '0.65rem', opacity: 0.5 }}>
+                  <span>50%</span>
+                  <span>100%</span>
+                  <span>150%</span>
+                </div>
+              </div>
+
               <h4>Personalización</h4>
               <p className="settings-desc">Cambia el fondo de pantalla de tu dashboard.</p>
               

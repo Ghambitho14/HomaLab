@@ -20,6 +20,25 @@ export const useAppLogic = () => {
   const [serverPort, setServerPort] = useState(3001);
   const [frontendPort, setFrontendPort] = useState(5173);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
+  const [zoomLevel, setZoomLevel] = useState(100);
+
+  const handleZoomChange = async (newVal) => {
+    setZoomLevel(newVal);
+    document.documentElement.style.setProperty('--zoom-scale', newVal / 100);
+    try {
+      await fetch(`${BACKEND_URL}/settings/zoom`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ zoomLevel: newVal })
+      });
+    } catch (err) {
+      console.error('Error saving zoom to backend:', err);
+    }
+  };
+
+  useEffect(() => {
+    document.documentElement.style.setProperty('--zoom-scale', zoomLevel / 100);
+  }, [zoomLevel]);
 
   // Estado para el menú desplegable (3 puntos)
   const [activeMenuId, setActiveMenuId] = useState(null);
@@ -77,6 +96,10 @@ export const useAppLogic = () => {
         if (data.dashboardName) setDashboardName(data.dashboardName);
         if (data.serverPort) setServerPort(data.serverPort);
         if (data.frontendPort) setFrontendPort(data.frontendPort);
+        if (data.zoomLevel) {
+          setZoomLevel(data.zoomLevel);
+          document.documentElement.style.setProperty('--zoom-scale', data.zoomLevel / 100);
+        }
       })
       .catch(err => console.error('Error cargando ajustes:', err));
   }, []);
@@ -311,6 +334,7 @@ export const useAppLogic = () => {
     handleResetWallpaper,
     handleSaveGeneralSettings,
     handleResetConnection,
+    zoomLevel, handleZoomChange,
     BACKEND_URL,
     filteredApps
   };

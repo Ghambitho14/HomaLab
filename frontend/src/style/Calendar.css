@@ -1,0 +1,65 @@
+.calendar-container {
+  padding-top: 1rem;
+}
+
+.calendar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 0.75rem;
+  padding: 0 4px;
+}
+
+.month-name {
+  text-transform: capitalize;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.year-label {
+  font-size: 0.85rem;
+  color: #888;
+  font-weight: 600;
+}
+
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+
+.day-name {
+  text-align: center;
+  font-size: 0.7rem;
+  color: #6366f1; /* Indigo */
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.day-cell {
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.7);
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+.day-cell.today {
+  background: linear-gradient(135deg, #38bdf8, #818cf8);
+  color: #fff;
+  font-weight: 700;
+  box-shadow: 0 4px 12px rgba(56, 189, 248, 0.3);
+}
+
+.day-cell.empty {
+  visibility: hidden;
+}
+
+.day-cell:not(.empty):not(.today):hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: #fff;
+}

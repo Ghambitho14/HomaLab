@@ -11,6 +11,7 @@ const { execSync } = require('child_process');
 require('dotenv').config();
 
 const multer = require('multer');
+const sqlite3 = require('sqlite3').verbose();
 
 const app = express();
 const server = http.createServer(app);
@@ -19,6 +20,57 @@ const server = http.createServer(app);
 const APPS_DIR = path.join(__dirname, 'apps');
 const UPLOADS_DIR = path.join(__dirname, 'uploads/backgrounds');
 const SETTINGS_FILE = path.join(__dirname, 'settings.json');
+const DB_FILE = path.join(__dirname, 'homelab.db');
+
+// Iniciar base de datos
+const db = new sqlite3.Database(DB_FILE, (err) => {
+  if (err) console.error('[SQLite] Error al conectar:', err.message);
+  else console.log('[SQLite] Conectado a homelab.db');
+});
+
+// Crear tabla de ajustes si no existe
+db.serialize(() => {
+  db.run(`CREATE TABLE IF NOT EXISTS settings (
+    key TEXT PRIMARY KEY,
+    value TEXT
+  )`);
+  
+  // Migrar de settings.json a SQLite si existe settings.json y la tabla está vacía
+  db.get("SELECT COUNT(*) as count FROM settings", (err, row) => {
+    if (!err && row.count === 0 && fs.existsSync(SETTINGS_FILE)) {
+      try {
+        const settings = JSON.parse(fs.readFileSync(SETTINGS_FILE));
+        Object.entries(settings).forEach(([key, value]) => {
+          db.run("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)", [key, JSON.stringify(value)]);
+        });
+        console.log('[SQLite] Migración de settings.json completada');
+      } catch (e) {
+        console.error('[SQLite] Error en migración:', e);
+      }
+    }
+  });
+});
+
+const getSetting = (key, defaultValue) => {
+  return new Promise((resolve) => {
+    db.get("SELECT value FROM settings WHERE key = ?", [key], (err, row) => {
+      if (err || !row) resolve(defaultValue);
+      else {
+        try { resolve(JSON.parse(row.value)); }
+        catch (e) { resolve(row.value); }
+      }
+    });
+  });
+};
+
+const saveSetting = (key, value) => {
+  return new Promise((resolve, reject) => {
+    db.run("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)", [key, JSON.stringify(value)], (err) => {
+      if (err) reject(err);
+      else resolve();
+    });
+  });
+};
 
 if (!fs.existsSync(APPS_DIR)) fs.mkdirSync(APPS_DIR);
 if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
@@ -54,113 +106,107 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 // ENDPOINTS: Ajustes y Personalización
 // ==========================================
 
-app.get('/settings', (req, res) => {
+app.get('/settings', async (req, res) => {
   try {
-    if (fs.existsSync(SETTINGS_FILE)) {
-      const settings = JSON.parse(fs.readFileSync(SETTINGS_FILE));
-      res.json(settings);
-    } else {
-      res.json({ 
-        wallpaper: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=2564&auto=format&fit=crop", 
-        isLocal: false,
-        dashboardName: "HomaLab",
-        serverPort: 3001
+    db.all("SELECT key, value FROM settings", (err, rows) => {
+      if (err) return res.status(500).json({ error: 'Error al leer base de datos' });
+      
+      const settings = {};
+      rows.forEach(row => {
+        try { settings[row.key] = JSON.parse(row.value); }
+        catch (e) { settings[row.key] = row.value; }
       });
-    }
+
+      // Valores por defecto si no existen
+      if (!settings.wallpaper) settings.wallpaper = "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=2564&auto=format&fit=crop";
+      if (!settings.dashboardName) settings.dashboardName = "HomaLab";
+      if (!settings.serverPort) settings.serverPort = 3001;
+      if (settings.zoomLevel === undefined) settings.zoomLevel = 100;
+
+      res.json(settings);
+    });
   } catch (err) {
-    res.status(500).json({ error: 'Error al leer ajustes' });
+    res.status(500).json({ error: 'Error al procesar ajustes' });
   }
 });
 
-app.post('/settings/upload', upload.single('wallpaper'), (req, res) => {
-  console.log('[Upload] Procesando archivo:', req.file ? req.file.originalname : 'NINGUNO');
-  
-  if (!req.file) {
-    console.error('[Upload Error] No se recibió el archivo en req.file');
-    return res.status(400).json({ error: 'No se subió ningún archivo' });
-  }
+app.post('/settings/upload', upload.single('wallpaper'), async (req, res) => {
+  if (!req.file) return res.status(400).json({ error: 'No se subió ningún archivo' });
   
   try {
-    const current = fs.existsSync(SETTINGS_FILE) ? JSON.parse(fs.readFileSync(SETTINGS_FILE)) : {};
     const wallpaperUrl = `/uploads/backgrounds/${req.file.filename}`;
-    const newSettings = { ...current, wallpaper: wallpaperUrl, isLocal: true };
+    await saveSetting('wallpaper', wallpaperUrl);
+    await saveSetting('isLocal', true);
     
-    fs.writeFileSync(SETTINGS_FILE, JSON.stringify(newSettings, null, 2));
-    console.log('[Upload Success] Nuevo fondo guardado en settings:', wallpaperUrl);
     res.json({ message: 'Fondo de pantalla actualizado', wallpaper: wallpaperUrl });
   } catch (err) {
-    console.error('[Upload Error] Error al guardar en settings.json:', err.message);
     res.status(500).json({ error: 'Error al guardar ajustes' });
   }
 });
 
-app.post('/settings/general', (req, res) => {
+app.post('/settings/general', async (req, res) => {
   const { dashboardName, serverPort, frontendPort } = req.body;
-  console.log('[Settings] Petición de cambio recibida:', { dashboardName, serverPort, frontendPort });
-  
   try {
-    const current = fs.existsSync(SETTINGS_FILE) ? JSON.parse(fs.readFileSync(SETTINGS_FILE)) : {};
-    const oldServerPort = current.serverPort || 3001;
-    const oldFrontendPort = current.frontendPort || 5173;
+    const oldServerPort = await getSetting('serverPort', 3001);
+    const oldFrontendPort = await getSetting('frontendPort', 5173);
     
-    const newSettings = { 
-      ...current, 
-      dashboardName: dashboardName || current.dashboardName || "HomaLab", 
+    await saveSetting('dashboardName', dashboardName || "HomaLab");
+    await saveSetting('serverPort', parseInt(serverPort) || 3001);
+    await saveSetting('frontendPort', parseInt(frontendPort) || 5173);
+    
+    // Sincronizar con settings.json por legado si es necesario
+    const currentSettings = {
+      dashboardName: dashboardName || "HomaLab",
       serverPort: parseInt(serverPort) || 3001,
-      frontendPort: parseInt(frontendPort) || 5173
+      frontendPort: parseInt(frontendPort) || 5173,
+      wallpaper: await getSetting('wallpaper', '')
     };
-    
-    // Guardar en settings.json
-    fs.writeFileSync(SETTINGS_FILE, JSON.stringify(newSettings, null, 2));
-    console.log('[Settings] Archivo settings.json actualizado con éxito');
-    
+    fs.writeFileSync(SETTINGS_FILE, JSON.stringify(currentSettings, null, 2));
+
     // 1. Actualizar vite.config.js si cambió el puerto del frontend
     if (oldFrontendPort != frontendPort) {
       const viteConfigPath = path.join(__dirname, '../frontend/vite.config.js');
       if (fs.existsSync(viteConfigPath)) {
         let content = fs.readFileSync(viteConfigPath, 'utf8');
-        console.log('[Settings] Actualizando puerto en vite.config.js...');
         if (content.includes('port:')) {
           content = content.replace(/port:\s*\d+/, `port: ${frontendPort}`);
         } else if (content.includes('server: {')) {
           content = content.replace(/server:\s*{/, `server: {\n    port: ${frontendPort},`);
-        } else {
-          // Si no hay bloque server, lo creamos (esto es más raro pero por si acaso)
-          content = content.replace(/defineConfig\({/, `defineConfig({\n  server: { port: ${frontendPort} },`);
         }
         fs.writeFileSync(viteConfigPath, content);
-        console.log(`[!] Puerto de Vite actualizado a ${frontendPort}`);
       }
     }
 
     const portChanged = oldServerPort != serverPort;
-    
     res.json({ 
       success: true,
-      message: portChanged ? 'Restaurando conexión... El servidor está cambiando al nuevo puerto.' : 'Ajustes guardados correctamente',
+      message: portChanged ? 'Restaurando... El servidor está cambiando al nuevo puerto.' : 'Ajustes guardados correctamente',
       restartRequested: portChanged
     });
 
     if (portChanged) {
-      console.log(`[RESTART] Cambiando puerto de ${oldServerPort} a ${serverPort}. Saliendo en 1s...`);
-      setTimeout(() => {
-        console.log('[RESTART] Ejecutando exit para reinicio de nodemon.');
-        process.exit(0);
-      }, 1000);
+      setTimeout(() => process.exit(0), 1000);
     }
   } catch (err) {
-    console.error('[Settings Error] Fallo crítico al guardar ajustes:', err);
-    res.status(500).json({ error: 'Fallo al guardar ajustes en el disco' });
+    res.status(500).json({ error: 'Fallo al guardar ajustes' });
   }
 });
 
-app.post('/settings/reset', (req, res) => {
+app.post('/settings/zoom', async (req, res) => {
+  const { zoomLevel } = req.body;
   try {
-    const current = fs.existsSync(SETTINGS_FILE) ? JSON.parse(fs.readFileSync(SETTINGS_FILE)) : {};
+    await saveSetting('zoomLevel', parseInt(zoomLevel) || 100);
+    res.json({ success: true, zoomLevel });
+  } catch (err) {
+    res.status(500).json({ error: 'Error al guardar zoom' });
+  }
+});
+
+app.post('/settings/reset', async (req, res) => {
+  try {
     const originalWallpaper = "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=2564&auto=format&fit=crop";
-    const newSettings = { ...current, wallpaper: originalWallpaper, isLocal: false };
-    
-    fs.writeFileSync(SETTINGS_FILE, JSON.stringify(newSettings, null, 2));
+    await saveSetting('wallpaper', originalWallpaper);
+    await saveSetting('isLocal', false);
     res.json({ message: 'Fondo de pantalla restablecido', wallpaper: originalWallpaper });
   } catch (err) {
     res.status(500).json({ error: 'Error al restablecer ajustes' });

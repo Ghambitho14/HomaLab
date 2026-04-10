@@ -1,6 +1,7 @@
 import React from 'react';
 import { formatBytes, formatSpeed } from '../utils/formatters';
 import '../style/Sidebar.css';
+import CalendarWidget from './CalendarWidget';
 
 const Sidebar = ({ time, metrics }) => {
   const formatTime = (date) => date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
@@ -25,6 +26,7 @@ const Sidebar = ({ time, metrics }) => {
       <div className="widget widget-time glass-panel blur-heavy">
         <h2>{formatTime(time)}</h2>
         <p>{formatDate(time)}</p>
+        <CalendarWidget date={time} />
       </div>
 
       {/* System Status Widget */}
