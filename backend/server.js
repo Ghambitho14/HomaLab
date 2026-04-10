@@ -122,6 +122,11 @@ app.get('/settings', async (req, res) => {
       if (!settings.dashboardName) settings.dashboardName = "HomaLab";
       if (!settings.serverPort) settings.serverPort = 3001;
       if (settings.zoomLevel === undefined) settings.zoomLevel = 100;
+      
+      // Nuevos ajustes visuales
+      if (settings.glassOpacity === undefined) settings.glassOpacity = 40;
+      if (settings.glassBlur === undefined) settings.glassBlur = 16;
+      if (settings.accentColor === undefined) settings.accentColor = "#38bdf8";
 
       res.json(settings);
     });
@@ -189,6 +194,17 @@ app.post('/settings/general', async (req, res) => {
     }
   } catch (err) {
     res.status(500).json({ error: 'Fallo al guardar ajustes' });
+  }
+});
+
+app.post('/settings/update', async (req, res) => {
+  const { key, value } = req.body;
+  if (!key) return res.status(400).json({ error: 'Falta la clave' });
+  try {
+    await saveSetting(key, value);
+    res.json({ success: true, key, value });
+  } catch (err) {
+    res.status(500).json({ error: 'Error al guardar el ajuste' });
   }
 });
 

@@ -22,145 +22,127 @@ const Modals = ({
   frontendPort, setFrontendPort,
   handleSaveGeneralSettings,
   handleResetConnection,
-  zoomLevel, handleZoomChange
+  zoomLevel, handleZoomChange,
+  glassOpacity, glassBlur, accentColor,
+  handleUpdateSetting
 }) => {
+  const [activeTab, setActiveTab] = React.useState('general');
+
   return (
     <>
       {/* Settings Modal */}
       <div className={`modal-overlay ${isSettingsModalOpen ? 'open' : ''}`}>
-        <div className="modal-content glass-panel blur-heavy settings-modal" style={{ maxWidth: '450px' }}>
+        <div className="modal-content glass-panel blur-heavy settings-modal" style={{ maxWidth: '650px', width: '90%' }}>
           <div className="modal-header">
             <h3>⚙️ Ajustes de HomaLab</h3>
             <button className="close-btn" onClick={() => setIsSettingsModalOpen(false)}>×</button>
           </div>
-          <div className="modal-body" style={{ maxHeight: '80vh' }}>
-            <div className="settings-section">
-              <h4>Visualización</h4>
-              <p className="settings-desc">Ajusta el tamaño de la interfaz (Zoom).</p>
-              
-              <div className="zoom-control" style={{ 
-                background: 'rgba(255,255,255,0.05)', 
-                padding: '1rem', 
-                borderRadius: '12px',
-                marginBottom: '1rem'
-              }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                  <span style={{ fontSize: '0.8rem', opacity: 0.7 }}>Escala:</span>
-                  <span style={{ fontSize: '0.9rem', fontWeight: 'bold', color: '#38bdf8' }}>{zoomLevel}%</span>
+          
+          <div className="settings-tabs">
+            <button className={`tab-btn ${activeTab === 'general' ? 'active' : ''}`} onClick={() => setActiveTab('general')}>General</button>
+            <button className={`tab-btn ${activeTab === 'appearance' ? 'active' : ''}`} onClick={() => setActiveTab('appearance')}>Apariencia</button>
+          </div>
+
+          <div className="modal-body" style={{ maxHeight: '70vh' }}>
+            {activeTab === 'general' && (
+              <div className="tab-content">
+                <div className="settings-section">
+                  <h4>Identidad del Sistema</h4>
+                  <div className="form-group">
+                    <label>Nombre del Dashboard</label>
+                    <input type="text" value={dashboardName} onChange={(e) => setDashboardName(e.target.value)} />
+                  </div>
                 </div>
-                <input 
-                  type="range" 
-                  min="50" 
-                  max="150" 
-                  step="5"
-                  value={zoomLevel} 
-                  onChange={(e) => handleZoomChange(parseInt(e.target.value))}
-                  style={{ width: '100%', cursor: 'pointer', accentColor: '#38bdf8' }}
-                />
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.3rem', fontSize: '0.65rem', opacity: 0.5 }}>
-                  <span>50%</span>
-                  <span>100%</span>
-                  <span>150%</span>
+
+                <div className="settings-section">
+                  <h4>Red y Puertos</h4>
+                  <div className="form-row" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                    <div className="form-group">
+                      <label>Puerto Web (Vite)</label>
+                      <input type="number" value={frontendPort} onChange={(e) => setFrontendPort(e.target.value)} />
+                    </div>
+                    <div className="form-group">
+                      <label>Puerto API (Server)</label>
+                      <input type="number" value={serverPort} onChange={(e) => setServerPort(e.target.value)} />
+                    </div>
+                  </div>
+                  <button 
+                    className="btn btn-primary" 
+                    style={{ width: '100%', marginTop: '1rem' }}
+                    onClick={() => handleSaveGeneralSettings(dashboardName, serverPort, frontendPort)}
+                  >
+                    💾 Guardar Cambios de Red
+                  </button>
                 </div>
-              </div>
 
-              <h4>Personalización</h4>
-              <p className="settings-desc">Cambia el fondo de pantalla de tu dashboard.</p>
-              
-              <div className="wallpaper-preview" style={{ 
-                height: '100px', 
-                borderRadius: '12px', 
-                background: `url(${wallpaper?.startsWith('/') ? BACKEND_URL + wallpaper : wallpaper}) center/cover`,
-                marginBottom: '1rem',
-                border: '1px solid rgba(255,255,255,0.1)'
-              }}></div>
-
-              <div className="upload-zone" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
-                <label className="btn btn-secondary" style={{ cursor: 'pointer', fontSize: '0.8rem' }}>
-                  📁 Subir
-                  <input 
-                    type="file" 
-                    accept="image/*" 
-                    style={{ display: 'none' }} 
-                    onChange={(e) => {
-                      if (e.target.files[0]) {
-                        handleWallpaperUpload(e.target.files[0]);
-                      }
-                    }}
-                  />
-                </label>
-                <button 
-                  className="btn btn-danger" 
-                  style={{ fontSize: '0.8rem' }}
-                  onClick={handleResetWallpaper}
-                >
-                  ↩️ Reset
-                </button>
-              </div>
-            </div>
-
-            <div className="settings-section" style={{ marginTop: '2rem', paddingTop: '1.5rem', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                <h4 style={{ margin: 0 }}>Identidad y Red</h4>
-                <div style={{ fontSize: '0.7rem', padding: '4px 8px', background: 'rgba(255,255,255,0.05)', borderRadius: '6px', color: 'rgba(255,255,255,0.6)' }}>
-                  📡 API: {BACKEND_URL}
+                <div className="settings-section">
+                  <h4>Emergencia</h4>
+                  <button className="btn btn-danger" style={{ width: '100%' }} onClick={handleResetConnection}>
+                    🆘 Resetear Conexión Local
+                  </button>
                 </div>
               </div>
-              <p className="settings-desc">Configura cómo se identifica y conecta tu HomaLab.</p>
-              
-              <div className="form-group" style={{ marginBottom: '1rem' }}>
-                <label>Nombre del Sistema</label>
-                <input 
-                  type="text" 
-                  value={dashboardName} 
-                  onChange={(e) => setDashboardName(e.target.value)} 
-                  placeholder="Ej. Mi HomaLab"
-                />
-              </div>
+            )}
 
-              <div className="form-row" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
-                <div className="form-group">
-                  <label>Puerto Web (Vite)</label>
-                  <input 
-                    type="number" 
-                    value={frontendPort} 
-                    onChange={(e) => setFrontendPort(e.target.value)} 
-                  />
+            {activeTab === 'appearance' && (
+              <div className="tab-content">
+                <div className="settings-section">
+                  <h4>Escala Global</h4>
+                  <div className="control-group">
+                    <div className="control-header">
+                      <span>Zoom Interfaz</span>
+                      <span>{zoomLevel}%</span>
+                    </div>
+                    <input type="range" min="50" max="150" step="5" value={zoomLevel} onChange={(e) => handleZoomChange(parseInt(e.target.value))} />
+                  </div>
                 </div>
-                <div className="form-group">
-                  <label>Puerto API (Server)</label>
-                  <input 
-                    type="number" 
-                    value={serverPort} 
-                    onChange={(e) => setServerPort(e.target.value)} 
-                  />
+
+                <div className="settings-section">
+                  <h4>Efecto Cristal (Glassmorphism)</h4>
+                  <div className="control-group">
+                    <div className="control-header">
+                      <span>Opacidad de Paneles</span>
+                      <span>{glassOpacity}%</span>
+                    </div>
+                    <input type="range" min="10" max="90" step="5" value={glassOpacity} onChange={(e) => handleUpdateSetting('glassOpacity', parseInt(e.target.value))} />
+                  </div>
+                  
+                  <div className="control-group" style={{ marginTop: '1rem' }}>
+                    <div className="control-header">
+                      <span>Nivel de Desenfoque (Blur)</span>
+                      <span>{glassBlur}px</span>
+                    </div>
+                    <input type="range" min="0" max="40" step="2" value={glassBlur} onChange={(e) => handleUpdateSetting('glassBlur', parseInt(e.target.value))} />
+                  </div>
+                </div>
+
+                <div className="settings-section">
+                  <h4>Color de Acento</h4>
+                  <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                    <input type="color" value={accentColor} onChange={(e) => handleUpdateSetting('accentColor', e.target.value)} style={{ width: '50px', height: '50px', border: 'none', borderRadius: '8px', cursor: 'pointer' }} />
+                    <span style={{ fontFamily: 'monospace' }}>{accentColor}</span>
+                  </div>
+                </div>
+
+                <div className="settings-section">
+                  <h4>Fondo de Pantalla</h4>
+                  <div className="wallpaper-preview" style={{ 
+                    height: '120px', 
+                    borderRadius: '12px', 
+                    background: `url(${wallpaper?.startsWith('/') ? BACKEND_URL + wallpaper : wallpaper}) center/cover`,
+                    marginBottom: '1rem',
+                    border: '1px solid rgba(255,255,255,0.1)'
+                  }}></div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+                    <label className="btn btn-secondary" style={{ cursor: 'pointer' }}>
+                      📁 Subir Imagen
+                      <input type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => e.target.files[0] && handleWallpaperUpload(e.target.files[0])} />
+                    </label>
+                    <button className="btn btn-danger" onClick={handleResetWallpaper}>↩️ Reset</button>
+                  </div>
                 </div>
               </div>
-
-              <div className="form-group" style={{ marginBottom: '1rem' }}>
-                <span className="tip" style={{ display: 'block', marginTop: '0.5rem', marginLeft: 0, fontSize: '0.7rem', color: '#ffbd2e' }}>
-                  ⚠️ Cambiar puertos reiniciará las apps y podría requerir recarga manual.
-                </span>
-              </div>
-
-              <div style={{ display: 'flex', gap: '0.5rem' }}>
-                <button 
-                  className="btn btn-primary" 
-                  style={{ flex: 2, padding: '12px' }}
-                  onClick={() => handleSaveGeneralSettings(dashboardName, serverPort, frontendPort)}
-                >
-                  💾 Guardar Cambios
-                </button>
-                <button 
-                  className="btn btn-danger" 
-                  style={{ flex: 1, padding: '12px', fontSize: '0.8rem' }}
-                  onClick={handleResetConnection}
-                  title="Si pierdes la conexión, haz clic aquí para volver al puerto 3001"
-                >
-                  🆘 Reset Local
-                </button>
-              </div>
-            </div>
+            )}
           </div>
           <div className="modal-footer">
             <button className="btn btn-secondary" style={{ width: '100%' }} onClick={() => setIsSettingsModalOpen(false)}>Cerrar</button>

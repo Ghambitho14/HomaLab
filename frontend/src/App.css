@@ -123,10 +123,16 @@
   height: 100%;
 }
 
+:root {
+  --glass-opacity: 0.4;
+  --glass-blur: 16px;
+  --accent-color: #38bdf8;
+}
+
 .blur-heavy {
-  background: rgba(20, 25, 40, 0.4);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  background: rgba(20, 25, 40, var(--glass-opacity));
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
   border: 1px solid rgba(255, 255, 255, 0.05);
   box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
 }
@@ -292,7 +298,7 @@
 
 .progress-fill {
   height: 100%;
-  background: #3b82f6;
+  background: linear-gradient(to right, var(--accent-color), #818cf8);
   border-radius: 3px;
 }
 
@@ -310,7 +316,7 @@
   font-weight: 500;
 }
 
-.up { color: #38bdf8; }
+.up { color: var(--accent-color); }
 .down { color: #4ade80; }
 
 .widget-settings {

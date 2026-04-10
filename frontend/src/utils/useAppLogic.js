@@ -21,6 +21,33 @@ export const useAppLogic = () => {
   const [frontendPort, setFrontendPort] = useState(5173);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [zoomLevel, setZoomLevel] = useState(100);
+  const [glassOpacity, setGlassOpacity] = useState(40);
+  const [glassBlur, setGlassBlur] = useState(16);
+  const [accentColor, setAccentColor] = useState('#38bdf8');
+
+  const updateUIStyle = (key, value) => {
+    if (key === 'glassOpacity') document.documentElement.style.setProperty('--glass-opacity', value / 100);
+    if (key === 'glassBlur') document.documentElement.style.setProperty('--glass-blur', `${value}px`);
+    if (key === 'accentColor') document.documentElement.style.setProperty('--accent-color', value);
+  };
+
+  const handleUpdateSetting = async (key, value) => {
+    // Actualizar UI instantáneamente
+    if (key === 'glassOpacity') setGlassOpacity(value);
+    if (key === 'glassBlur') setGlassBlur(value);
+    if (key === 'accentColor') setAccentColor(value);
+    updateUIStyle(key, value);
+
+    try {
+      await fetch(`${BACKEND_URL}/settings/update`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key, value })
+      });
+    } catch (err) {
+      console.error('Error saving setting:', err);
+    }
+  };
 
   const handleZoomChange = async (newVal) => {
     setZoomLevel(newVal);
@@ -99,6 +126,18 @@ export const useAppLogic = () => {
         if (data.zoomLevel) {
           setZoomLevel(data.zoomLevel);
           document.documentElement.style.setProperty('--zoom-scale', data.zoomLevel / 100);
+        }
+        if (data.glassOpacity) {
+          setGlassOpacity(data.glassOpacity);
+          document.documentElement.style.setProperty('--glass-opacity', data.glassOpacity / 100);
+        }
+        if (data.glassBlur) {
+          setGlassBlur(data.glassBlur);
+          document.documentElement.style.setProperty('--glass-blur', `${data.glassBlur}px`);
+        }
+        if (data.accentColor) {
+          setAccentColor(data.accentColor);
+          document.documentElement.style.setProperty('--accent-color', data.accentColor);
         }
       })
       .catch(err => console.error('Error cargando ajustes:', err));
@@ -335,6 +374,8 @@ export const useAppLogic = () => {
     handleSaveGeneralSettings,
     handleResetConnection,
     zoomLevel, handleZoomChange,
+    glassOpacity, glassBlur, accentColor,
+    handleUpdateSetting,
     BACKEND_URL,
     filteredApps
   };
