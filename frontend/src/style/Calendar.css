@@ -49,7 +49,7 @@
 }
 
 .day-cell.today {
-  background: linear-gradient(135deg, #38bdf8, #818cf8);
+  background: linear-gradient(135deg, var(--accent-color), #818cf8);
   color: #fff;
   font-weight: 700;
   box-shadow: 0 4px 12px rgba(56, 189, 248, 0.3);

@@ -24,19 +24,112 @@ export const useAppLogic = () => {
   const [glassOpacity, setGlassOpacity] = useState(40);
   const [glassBlur, setGlassBlur] = useState(16);
   const [accentColor, setAccentColor] = useState('#38bdf8');
+  const [textColor, setTextColor] = useState('#f8fafc');
+  const [textSecondaryColor, setTextSecondaryColor] = useState('#94a3b8');
+  const [bgColor, setBgColor] = useState('#0b0f19');
+  const [sidebarColor, setSidebarColor] = useState('#0b0f19');
+  const [availableWallpapers, setAvailableWallpapers] = useState({ backgrounds: [], defaul: [] });
+
+  // Colores de elementos de interfaz (sin opacidad, se aplica con --glass-opacity)
+  const [navbarColor, setNavbarColor] = useState('');
+  const [searchbarColor, setSearchbarColor] = useState('');
+  const [widgetTimeColor, setWidgetTimeColor] = useState('');
+  const [widgetSecondaryColor, setWidgetSecondaryColor] = useState('');
+  const [sidebarPanelColor, setSidebarPanelColor] = useState('');
+  const [brandLogoColor, setBrandLogoColor] = useState('#38bdf8');
+
+  // Helper para convertir hex a rgba con opacidad
+  const applyColorWithOpacity = (colorVar, colorHex, opacity) => {
+    if (!colorHex || colorHex.trim() === '') {
+      document.documentElement.style.removeProperty(colorVar);
+      return;
+    }
+    const rgba = parseInt(colorHex.slice(1), 16);
+    const r = (rgba >> 16) & 255;
+    const g = (rgba >> 8) & 255;
+    const b = rgba & 255;
+    document.documentElement.style.setProperty(colorVar, `rgba(${r}, ${g}, ${b}, ${opacity / 100})`);
+  };
 
   const updateUIStyle = (key, value) => {
-    if (key === 'glassOpacity') document.documentElement.style.setProperty('--glass-opacity', value / 100);
-    if (key === 'glassBlur') document.documentElement.style.setProperty('--glass-blur', `${value}px`);
-    if (key === 'accentColor') document.documentElement.style.setProperty('--accent-color', value);
+    // Helper para reaplica colores con opacidad
+    const reapplyAllColors = (opacity) => {
+      applyColorWithOpacity('--navbar-color', navbarColor, opacity);
+      applyColorWithOpacity('--searchbar-color', searchbarColor, opacity);
+      applyColorWithOpacity('--widget-time-color', widgetTimeColor, opacity);
+      applyColorWithOpacity('--widget-secondary-color', widgetSecondaryColor, opacity);
+      applyColorWithOpacity('--sidebar-panel-color', sidebarPanelColor, opacity);
+    };
+
+    // Actualizar variables CSS
+    switch(key) {
+      case 'glassOpacity':
+        document.documentElement.style.setProperty('--glass-opacity', value / 100);
+        reapplyAllColors(value);
+        break;
+      case 'glassBlur':
+        document.documentElement.style.setProperty('--glass-blur', `${value}px`);
+        reapplyAllColors(glassOpacity);
+        break;
+      case 'accentColor':
+        document.documentElement.style.setProperty('--accent-color', value);
+        document.documentElement.style.setProperty('--accent-cyan', value);
+        document.documentElement.style.setProperty('--accent-cyan-hover', value);
+        break;
+      case 'textColor':
+        document.documentElement.style.setProperty('--text-color', value);
+        document.documentElement.style.setProperty('--text-primary', value);
+        break;
+      case 'textSecondaryColor':
+        document.documentElement.style.setProperty('--text-secondary', value);
+        break;
+      case 'bgColor':
+        document.documentElement.style.setProperty('--bg-color', value);
+        break;
+      case 'sidebarColor':
+        document.documentElement.style.setProperty('--sidebar-color', value);
+        break;
+      case 'navbarColor':
+        setNavbarColor(value);
+        applyColorWithOpacity('--navbar-color', value, glassOpacity);
+        break;
+      case 'searchbarColor':
+        setSearchbarColor(value);
+        applyColorWithOpacity('--searchbar-color', value, glassOpacity);
+        break;
+      case 'widgetTimeColor':
+        setWidgetTimeColor(value);
+        applyColorWithOpacity('--widget-time-color', value, glassOpacity);
+        break;
+      case 'widgetSecondaryColor':
+        setWidgetSecondaryColor(value);
+        applyColorWithOpacity('--widget-secondary-color', value, glassOpacity);
+        break;
+      case 'sidebarPanelColor':
+        setSidebarPanelColor(value);
+        applyColorWithOpacity('--sidebar-panel-color', value, glassOpacity);
+        break;
+      case 'brandLogoColor':
+        document.documentElement.style.setProperty('--brand-logo-color', value);
+        break;
+      default:
+        break;
+    }
   };
 
   const handleUpdateSetting = async (key, value) => {
-    // Actualizar UI instantáneamente
+    // Actualizar estilo global (esto también actualiza el estado)
+    updateUIStyle(key, value);
+    
+    // Actualizar resto de estados locales si es necesario
     if (key === 'glassOpacity') setGlassOpacity(value);
     if (key === 'glassBlur') setGlassBlur(value);
     if (key === 'accentColor') setAccentColor(value);
-    updateUIStyle(key, value);
+    if (key === 'textColor') setTextColor(value);
+    if (key === 'textSecondaryColor') setTextSecondaryColor(value);
+    if (key === 'bgColor') setBgColor(value);
+    if (key === 'sidebarColor') setSidebarColor(value);
+    if (key === 'brandLogoColor') setBrandLogoColor(value);
 
     try {
       await fetch(`${BACKEND_URL}/settings/update`, {
@@ -119,7 +212,8 @@ export const useAppLogic = () => {
     fetch(`${BACKEND_URL}/settings`)
       .then(res => res.json())
       .then(data => {
-        if (data.wallpaper) setWallpaper(data.wallpaper);
+        const w = data.wallpaper;
+        if (w != null && String(w).trim() !== '') setWallpaper(w);
         if (data.dashboardName) setDashboardName(data.dashboardName);
         if (data.serverPort) setServerPort(data.serverPort);
         if (data.frontendPort) setFrontendPort(data.frontendPort);
@@ -138,6 +232,60 @@ export const useAppLogic = () => {
         if (data.accentColor) {
           setAccentColor(data.accentColor);
           document.documentElement.style.setProperty('--accent-color', data.accentColor);
+          document.documentElement.style.setProperty('--accent-cyan', data.accentColor);
+          document.documentElement.style.setProperty('--accent-cyan-hover', data.accentColor);
+        }
+        if (data.textColor) {
+          setTextColor(data.textColor);
+          document.documentElement.style.setProperty('--text-color', data.textColor);
+          document.documentElement.style.setProperty('--text-primary', data.textColor);
+        }
+        if (data.sidebarColor) {
+          setSidebarColor(data.sidebarColor);
+          document.documentElement.style.setProperty('--sidebar-color', data.sidebarColor);
+        }
+        if (data.textSecondaryColor) {
+          setTextSecondaryColor(data.textSecondaryColor);
+          document.documentElement.style.setProperty('--text-secondary', data.textSecondaryColor);
+        }
+        if (data.bgColor) {
+          setBgColor(data.bgColor);
+          document.documentElement.style.setProperty('--bg-color', data.bgColor);
+        }
+        if (data.navbarColor) {
+          setNavbarColor(data.navbarColor);
+          applyColorWithOpacity('--navbar-color', data.navbarColor, data.glassOpacity || 40);
+        }
+        if (data.searchbarColor) {
+          setSearchbarColor(data.searchbarColor);
+          applyColorWithOpacity('--searchbar-color', data.searchbarColor, data.glassOpacity || 40);
+        }
+        if (data.widgetTimeColor) {
+          setWidgetTimeColor(data.widgetTimeColor);
+          applyColorWithOpacity('--widget-time-color', data.widgetTimeColor, data.glassOpacity || 40);
+        }
+        if (data.widgetSecondaryColor) {
+          setWidgetSecondaryColor(data.widgetSecondaryColor);
+          applyColorWithOpacity('--widget-secondary-color', data.widgetSecondaryColor, data.glassOpacity || 40);
+        }
+        if (data.sidebarPanelColor) {
+          setSidebarPanelColor(data.sidebarPanelColor);
+          applyColorWithOpacity('--sidebar-panel-color', data.sidebarPanelColor, data.glassOpacity || 40);
+        }
+        if (data.brandLogoColor) {
+          setBrandLogoColor(data.brandLogoColor);
+          document.documentElement.style.setProperty('--brand-logo-color', data.brandLogoColor);
+        }
+      })
+      .then(() => {
+        return fetch(`${BACKEND_URL}/settings/wallpapers`);
+      })
+      .then(res => res.json())
+      .then((wpData) => {
+        setAvailableWallpapers(wpData);
+        const first = wpData.backgrounds?.[0];
+        if (first) {
+          setWallpaper((prev) => (prev != null && String(prev).trim() !== '' ? prev : first));
         }
       })
       .catch(err => console.error('Error cargando ajustes:', err));
@@ -190,10 +338,29 @@ export const useAppLogic = () => {
     window.location.reload();
   };
 
-  const handleWallpaperUpload = async (file) => {
+  const handleWallpaperUpload = async (fileOrPath) => {
+    if (typeof fileOrPath === 'string') {
+      try {
+        const res = await fetch(`${BACKEND_URL}/settings/update`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ key: 'wallpaper', value: fileOrPath })
+        });
+        const data = await res.json().catch(() => ({}));
+        if (res.ok) {
+          setWallpaper(fileOrPath);
+          return true;
+        }
+        alert('❌ Error: ' + (data.error || res.statusText));
+      } catch (_err) {
+        alert('❌ Error de conexión al elegir fondo');
+      }
+      return false;
+    }
+
     const formData = new FormData();
-    formData.append('wallpaper', file);
-    
+    formData.append('wallpaper', fileOrPath);
+
     try {
       const res = await fetch(`${BACKEND_URL}/settings/upload`, {
         method: 'POST',
@@ -206,7 +373,7 @@ export const useAppLogic = () => {
       } else {
         alert('❌ Error: ' + data.error);
       }
-    } catch (err) {
+    } catch (_err) {
       alert('❌ Error de conexión al subir imagen');
     }
     return false;
@@ -219,8 +386,24 @@ export const useAppLogic = () => {
       if (res.ok) {
         setWallpaper(data.wallpaper);
       }
-    } catch (err) {
+    } catch (_err) {
       alert('❌ Error al restablecer fondo');
+    }
+  };
+
+  const handleSetWallpaperAsDefault = async (wallpaperPath) => {
+    try {
+      const res = await fetch(`${BACKEND_URL}/settings/wallpaper/set-default`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ wallpaper: wallpaperPath })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setWallpaper(data.wallpaper);
+      }
+    } catch (_err) {
+      alert('❌ Error al establecer default');
     }
   };
 
@@ -239,7 +422,7 @@ export const useAppLogic = () => {
       } else {
         alert('❌ Error al cargar configuración: ' + data.error);
       }
-    } catch (err) {
+    } catch (_err) {
       alert('❌ Error de conexión');
     }
   };
@@ -264,7 +447,7 @@ export const useAppLogic = () => {
       } else {
         alert('❌ Error: ' + data.error);
       }
-    } catch (err) {
+    } catch (_err) {
       alert('❌ Error de conexión con el backend');
     } finally {
       setIsUpdating(false);
@@ -299,7 +482,7 @@ export const useAppLogic = () => {
       } else {
         alert('❌ Error: ' + data.error);
       }
-    } catch (err) {
+    } catch (_err) {
       alert('❌ Error de conexión con el backend');
     } finally {
       setIsInstalling(false);
@@ -369,13 +552,17 @@ export const useAppLogic = () => {
     toggleStatus,
     deleteApp,
     openEdit,
+    openLogs,
+    closeLogs,
     handleWallpaperUpload,
     handleResetWallpaper,
     handleSaveGeneralSettings,
     handleResetConnection,
     zoomLevel, handleZoomChange,
-    glassOpacity, glassBlur, accentColor,
+    glassOpacity, glassBlur, accentColor, textColor, textSecondaryColor, bgColor, sidebarColor,
+    navbarColor, searchbarColor, widgetTimeColor, widgetSecondaryColor, sidebarPanelColor, brandLogoColor,
     handleUpdateSetting,
+    availableWallpapers, handleSetWallpaperAsDefault,
     BACKEND_URL,
     filteredApps
   };

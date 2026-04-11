@@ -36,14 +36,23 @@ const AppCard = ({
         </div>
       </div>
       
-      {/* MENÚ DE 3 PUNTOS */}
-      <div className="app-menu-container">
+      {/* BOTONES DE ACCIÓN EN LA ESQUINA SUPERIOR DERECHA */}
+      <div className="app-actions-container">
+        <button 
+          className="action-btn edit-btn" 
+          onClick={(e) => { e.stopPropagation(); openEdit(app.name, app.rawName, e); }}
+          title="Editar configuración"
+        >
+          ⚙️
+        </button>
+        
         <button 
           className="menu-dots-btn" 
           onClick={(e) => {
             e.stopPropagation();
             setActiveMenuId(activeMenuId === app.id ? null : app.id);
           }}
+          title="Más opciones"
         >
           ⋮
         </button>
@@ -55,15 +64,6 @@ const AppCard = ({
                 <button className="menu-item toggle-btn" onClick={(e) => { setActiveMenuId(null); toggleStatus(app.id, app.status, e); }}>
                   {app.status === 'running' ? '⏹ Detener App' : '▶ Iniciar App'}
                 </button>
-                
-                {app.isManaged && (
-                  <button 
-                    className="menu-item" 
-                    onClick={(e) => { setActiveMenuId(null); openEdit(app.name, app.rawName, e); }}
-                  >
-                    ⚙️ Configurar / Editar
-                  </button>
-                )}
                 
                 <button className="menu-item" onClick={(e) => { setActiveMenuId(null); openLogs(app.id, app.name, e); }}>
                   📋 Ver Logs en Vivo

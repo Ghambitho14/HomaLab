@@ -7,10 +7,20 @@
   --glass-bg: rgba(255, 255, 255, 0.03);
   --glass-border: rgba(255, 255, 255, 0.08);
   --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
-  --glass-blur: blur(12px);
+  --glass-blur: 12px;
   
   --text-primary: #f8fafc;
   --text-secondary: #94a3b8;
+  --text-color: #f8fafc;
+  --sidebar-color: #0b0f19;
+
+  /* Element-specific colors */
+  --navbar-color: rgba(255, 255, 255, 0.03);
+  --searchbar-color: rgba(255, 255, 255, 0.03);
+  --widget-time-color: rgba(255, 255, 255, 0.03);
+  --widget-secondary-color: rgba(255, 255, 255, 0.03);
+  --sidebar-panel-color: rgba(255, 255, 255, 0.03);
+  --brand-logo-color: var(--accent-color, #38bdf8);
   
   --accent-cyan: #22d3ee;
   --accent-cyan-hover: #06b6d4;
@@ -35,7 +45,8 @@
 
 body {
   font-family: 'Inter', system-ui, Avenir, Helvetica, Arial, sans-serif;
-  background: url('https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=2564&auto=format&fit=crop') center/cover no-repeat fixed;
+  background-color: var(--bg-color);
+  background-image: none;
   color: var(--text-primary);
   min-height: 100vh;
   margin: 0;
@@ -64,14 +75,14 @@ a {
 }
 
 a:hover {
-  color: var(--accent-cyan-hover);
+  color: color-mix(in srgb, var(--accent-cyan) 78%, white);
 }
 
 /* Glassmorphism Utility Classes */
 .glass-panel {
   background: var(--glass-bg);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
   border: 1px solid var(--glass-border);
   box-shadow: var(--glass-shadow);
   border-radius: var(--radius-lg);
@@ -79,8 +90,8 @@ a:hover {
 
 .glass-card {
   background: rgba(255, 255, 255, 0.02);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-md);
   transition: transform 0.3s ease, background 0.3s ease, border-color 0.3s ease;

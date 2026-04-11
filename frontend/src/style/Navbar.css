@@ -8,6 +8,9 @@
   position: sticky;
   top: 0;
   z-index: 1000;
+  background: var(--navbar-color, rgba(30, 35, 50, 0.4));
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
 }
 
 .navbar-brand {
@@ -16,13 +19,13 @@
   gap: 12px;
   font-weight: 700;
   font-size: 1.1rem;
-  color: #fff;
+  color: var(--text-primary);
 }
 
 .brand-logo {
   width: 32px;
   height: 32px;
-  background: linear-gradient(135deg, #38bdf8, #818cf8);
+  background: var(--brand-logo-color);
   border-radius: 8px;
   display: flex;
   align-items: center;
@@ -71,7 +74,7 @@
 .nav-btn {
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  color: #fff;
+  color: var(--text-primary);
   padding: 6px 14px;
   border-radius: 8px;
   font-size: 0.85rem;

@@ -24,9 +24,35 @@ const Modals = ({
   handleResetConnection,
   zoomLevel, handleZoomChange,
   glassOpacity, glassBlur, accentColor,
-  handleUpdateSetting
+  handleUpdateSetting,
+  textColor, textSecondaryColor, bgColor, sidebarColor,
+  navbarColor, searchbarColor, widgetTimeColor, widgetSecondaryColor, sidebarPanelColor, brandLogoColor,
+  availableWallpapers, handleSetWallpaperAsDefault
 }) => {
   const [activeTab, setActiveTab] = React.useState('general');
+
+  React.useEffect(() => {
+    if (activeTab === 'colors' || activeTab === 'wallpapers') setActiveTab('appearance');
+  }, [activeTab]);
+
+  /** Solo `uploads/backgrounds`: ahí se suben los fondos y vive el predeterminado `background.png`. */
+  const wallpaperPickerItems = React.useMemo(() => {
+    const bg = availableWallpapers.backgrounds || [];
+    // Agregar opción de fondo transparente al inicio
+    return [
+      { path: 'transparent', scope: 'special' },
+      ...bg.map((path) => ({ path, scope: 'backgrounds' }))
+    ];
+  }, [availableWallpapers]);
+
+  const wallpaperSrc = (p) => (p.startsWith('/') ? BACKEND_URL + p : p);
+  const wallpaperBasename = (p) => p.replace(/^.*\//, '') || p;
+
+  const previewPath =
+    wallpaper != null && String(wallpaper).trim() !== ''
+      ? String(wallpaper).trim()
+      : wallpaperPickerItems[0]?.path;
+  const previewImageUrl = previewPath ? wallpaperSrc(previewPath) : null;
 
   return (
     <>
@@ -117,29 +143,173 @@ const Modals = ({
                 </div>
 
                 <div className="settings-section">
-                  <h4>Color de Acento</h4>
-                  <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-                    <input type="color" value={accentColor} onChange={(e) => handleUpdateSetting('accentColor', e.target.value)} style={{ width: '50px', height: '50px', border: 'none', borderRadius: '8px', cursor: 'pointer' }} />
-                    <span style={{ fontFamily: 'monospace' }}>{accentColor}</span>
+                  <h4>Colores de la interfaz</h4>
+
+                  {/* --- Colores de texto y fondo --- */}
+                  <p className="color-group-label">Texto y fondo</p>
+
+                  <div className="color-picker-row">
+                    <span>Texto principal</span>
+                    <input type="color" value={textColor} onChange={(e) => handleUpdateSetting('textColor', e.target.value)} title={textColor} />
+                  </div>
+
+                  <div className="color-picker-row">
+                    <span>Texto secundario</span>
+                    <input type="color" value={textSecondaryColor} onChange={(e) => handleUpdateSetting('textSecondaryColor', e.target.value)} title={textSecondaryColor} />
+                  </div>
+
+                  <div className="color-picker-row">
+                    <span>Acento (botones, enlaces)</span>
+                    <input type="color" value={accentColor} onChange={(e) => handleUpdateSetting('accentColor', e.target.value)} title={accentColor} />
+                  </div>
+
+                  {/* --- Colores de elementos UI --- */}
+                  <p className="color-group-label" style={{ marginTop: '1.25rem' }}>Elementos de la interfaz (deja vacío para transparente)</p>
+
+                  <div className="color-picker-row">
+                    <span>🔷 Navbar (barra superior)</span>
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                      <input type="color" value={navbarColor || '#ffffff'} onChange={(e) => handleUpdateSetting('navbarColor', e.target.value)} title={navbarColor} />
+                      {navbarColor && <button className="btn-clear-color" onClick={() => handleUpdateSetting('navbarColor', '')} title="Limpiar color">✕</button>}
+                    </div>
+                  </div>
+
+                  <div className="color-picker-row">
+                    <span>🔍 Barra de búsqueda</span>
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                      <input type="color" value={searchbarColor || '#ffffff'} onChange={(e) => handleUpdateSetting('searchbarColor', e.target.value)} title={searchbarColor} />
+                      {searchbarColor && <button className="btn-clear-color" onClick={() => handleUpdateSetting('searchbarColor', '')} title="Limpiar color">✕</button>}
+                    </div>
+                  </div>
+
+                  <div className="color-picker-row">
+                    <span>🕐 Widget de tiempo</span>
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                      <input type="color" value={widgetTimeColor || '#ffffff'} onChange={(e) => handleUpdateSetting('widgetTimeColor', e.target.value)} title={widgetTimeColor} />
+                      {widgetTimeColor && <button className="btn-clear-color" onClick={() => handleUpdateSetting('widgetTimeColor', '')} title="Limpiar color">✕</button>}
+                    </div>
+                  </div>
+
+                  <div className="color-picker-row">
+                    <span>📊 Widget de métricas</span>
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                      <input type="color" value={widgetSecondaryColor || '#ffffff'} onChange={(e) => handleUpdateSetting('widgetSecondaryColor', e.target.value)} title={widgetSecondaryColor} />
+                      {widgetSecondaryColor && <button className="btn-clear-color" onClick={() => handleUpdateSetting('widgetSecondaryColor', '')} title="Limpiar color">✕</button>}
+                    </div>
+                  </div>
+
+                  <div className="color-picker-row">
+                    <span>📌 Logo / Ícono marca</span>
+                    <input type="color" value={brandLogoColor.startsWith('rgba') ? '#38bdf8' : brandLogoColor} onChange={(e) => handleUpdateSetting('brandLogoColor', e.target.value)} title={brandLogoColor} />
+                  </div>
+                  
+                  <div className="color-reset-button-container" style={{ marginTop: '1.5rem', textAlign: 'center' }}>
+                    <button 
+                      className="btn btn-secondary" 
+                      onClick={() => {
+                        // Valores base para los colores
+                        const baseColors = {
+                          accentColor: '#38bdf8',
+                          textColor: '#f8fafc',
+                          textSecondaryColor: '#94a3b8',
+                          navbarColor: '',
+                          searchbarColor: '',
+                          widgetTimeColor: '',
+                          widgetSecondaryColor: '',
+                          sidebarPanelColor: '',
+                          brandLogoColor: '#38bdf8'
+                        };
+                        
+                        // Actualizar cada color a su valor base
+                        Object.entries(baseColors).forEach(([key, value]) => {
+                          handleUpdateSetting(key, value);
+                        });
+                        
+                        alert('🎨 Colores restablecidos a los valores base');
+                      }}
+                      style={{ width: '100%' }}
+                    >
+                      🎨 Restablecer Colores Base
+                    </button>
                   </div>
                 </div>
 
                 <div className="settings-section">
-                  <h4>Fondo de Pantalla</h4>
-                  <div className="wallpaper-preview" style={{ 
-                    height: '120px', 
-                    borderRadius: '12px', 
-                    background: `url(${wallpaper?.startsWith('/') ? BACKEND_URL + wallpaper : wallpaper}) center/cover`,
-                    marginBottom: '1rem',
-                    border: '1px solid rgba(255,255,255,0.1)'
-                  }}></div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
-                    <label className="btn btn-secondary" style={{ cursor: 'pointer' }}>
-                      📁 Subir Imagen
-                      <input type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => e.target.files[0] && handleWallpaperUpload(e.target.files[0])} />
+                  <h4>Fondo de pantalla</h4>
+                  <p className="wallpaper-picker-hint">
+                    Todas las imágenes están en <code>uploads/backgrounds</code>. El fondo por defecto de la app es <code>background.png</code>. Pulsa un recuadro para usarlo; la vista previa arriba muestra el activo.
+                  </p>
+                  <div
+                    className="wallpaper-preview"
+                    style={{
+                      height: '120px',
+                      borderRadius: '12px',
+                      marginBottom: '1rem',
+                      border: '1px solid rgba(255,255,255,0.1)',
+                      backgroundColor: 'rgba(0,0,0,0.35)',
+                      backgroundImage: previewImageUrl ? `url("${previewImageUrl.replace(/"/g, '\\"')}")` : 'none',
+                      backgroundSize: 'cover',
+                      backgroundPosition: 'center',
+                      backgroundRepeat: 'no-repeat'
+                    }}
+                  />
+
+                  {wallpaperPickerItems.length > 0 ? (
+                    <div className="wallpaper-picker-block">
+                      <p className="wallpaper-picker-label">Selector de fondos</p>
+                      <div className="wallpaper-picker-grid" role="listbox" aria-label="Fondos en uploads/backgrounds">
+                        {wallpaperPickerItems.map(({ path: wp, scope }) => {
+                          const isTransparent = scope === 'special' && wp === 'transparent';
+                          const isPresetDefault = /\/background\.png$/i.test(wp);
+                          
+                          return (
+                            <div
+                              key={wp}
+                              role="option"
+                              aria-selected={wallpaper === wp || (wallpaper === '' && isTransparent)}
+                              title={isTransparent ? 'Fondo Transparente' : wallpaperBasename(wp)}
+                              className={`wallpaper-picker-tile${(wallpaper === wp || (wallpaper === '' && isTransparent)) ? ' is-selected' : ''}`}
+                              onClick={() => handleWallpaperUpload(isTransparent ? '' : wp)}
+                            >
+                              {isTransparent ? (
+                                <div className="transparent-bg-placeholder">
+                                  <span className="transparent-icon">◻️</span>
+                                  <span className="transparent-text">Transparente</span>
+                                </div>
+                              ) : (
+                                <img src={wallpaperSrc(wp)} alt="" loading="lazy" />
+                              )}
+                              {!isPresetDefault && !isTransparent && (
+                                <button
+                                  type="button"
+                                  className="wallpaper-picker-pin btn btn-secondary"
+                                  title="Sustituir background.png (fondo por defecto al restablecer)"
+                                  onClick={(e) => { e.stopPropagation(); handleSetWallpaperAsDefault(wp); }}
+                                >
+                                  ★
+                                </button>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="wallpaper-picker-label" style={{ marginBottom: '1rem' }}>
+                      No hay imágenes en <code>uploads/backgrounds</code>. Sube una abajo o reinicia el servidor para generar los presets del proyecto.
+                    </p>
+                  )}
+
+                  <div style={{ border: '2px dashed rgba(255,255,255,0.2)', borderRadius: '12px', padding: '2rem', textAlign: 'center', cursor: 'pointer' }}>
+                    <label style={{ cursor: 'pointer', display: 'block' }}>
+                      <p style={{ marginTop: '0.5rem', color: 'rgba(255,255,255,0.6)' }}>Subir nuevo fondo</p>
+                      <input type="file" accept="image/*,.svg" style={{ display: 'none' }} onChange={(e) => e.target.files[0] && handleWallpaperUpload(e.target.files[0])} />
                     </label>
-                    <button className="btn btn-danger" onClick={handleResetWallpaper}>↩️ Reset</button>
                   </div>
+
+                  <button type="button" className="btn btn-danger" style={{ width: '100%', marginTop: '1rem' }} onClick={handleResetWallpaper}>
+                    Restablecer a background.png (predeterminado)
+                  </button>
                 </div>
               </div>
             )}

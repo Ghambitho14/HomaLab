@@ -5,22 +5,25 @@
   margin-bottom: 2rem;
   border-radius: 12px;
   gap: 12px;
+  background: var(--searchbar-color, rgba(30, 35, 50, 0.4));
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
 }
 
 .search-icon {
-  color: #666;
+  color: var(--text-secondary);
   font-size: 1rem;
 }
 
 .search-input {
   background: transparent;
   border: none;
-  color: #fff;
+  color: var(--text-primary);
   width: 100%;
   font-size: 0.95rem;
   outline: none;
 }
 
 .search-input::placeholder {
-  color: #555;
+  color: var(--text-secondary);
 }

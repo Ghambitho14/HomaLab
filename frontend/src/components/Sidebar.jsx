@@ -3,7 +3,7 @@ import { formatBytes, formatSpeed } from '../utils/formatters';
 import '../style/Sidebar.css';
 import CalendarWidget from './CalendarWidget';
 
-const Sidebar = ({ time, metrics }) => {
+const Sidebar = ({ time, metrics, openEdit }) => {
   const formatTime = (date) => date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
   const formatDate = (date) => date.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
@@ -24,6 +24,13 @@ const Sidebar = ({ time, metrics }) => {
     <aside className="sidebar">
       {/* Time Widget */}
       <div className="widget widget-time glass-panel blur-heavy">
+        <button 
+          className="widget-edit-btn"
+          onClick={(e) => { e.stopPropagation(); openEdit('Calendario', 'widget-time', e); }}
+          title="Editar widget"
+        >
+          ⚙️
+        </button>
         <h2>{formatTime(time)}</h2>
         <p>{formatDate(time)}</p>
         <CalendarWidget date={time} />
@@ -31,6 +38,13 @@ const Sidebar = ({ time, metrics }) => {
 
       {/* System Status Widget */}
       <div className="widget glass-panel blur-heavy">
+        <button 
+          className="widget-edit-btn"
+          onClick={(e) => { e.stopPropagation(); openEdit('Estado del sistema', 'widget-system', e); }}
+          title="Editar widget"
+        >
+          ⚙️
+        </button>
         <div className="widget-header">
           <h3>Estado del sistema</h3>
         </div>
@@ -38,7 +52,7 @@ const Sidebar = ({ time, metrics }) => {
           <div className="meter meter-cpu">
             <svg viewBox="0 0 36 36" className="circular-chart">
               <path className="circle-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-              <path className="circle" strokeDasharray={`${cpuLoad}, 100`} d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" style={{stroke: '#38bdf8'}} />
+              <path className="circle" strokeDasharray={`${cpuLoad}, 100`} d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" style={{ stroke: '#38bdf8' }} />
               <text x="18" y="20.5" className="percentage">{cpuLoad}%</text>
             </svg>
             <div className="meter-label">CPU<br/><span>{cpuTemp ? `${cpuTemp}°C` : '—'}</span></div>
@@ -56,6 +70,13 @@ const Sidebar = ({ time, metrics }) => {
 
       {/* Storage Widget */}
       <div className="widget glass-panel blur-heavy">
+        <button 
+          className="widget-edit-btn"
+          onClick={(e) => { e.stopPropagation(); openEdit('Almacenamiento', 'widget-storage', e); }}
+          title="Editar widget"
+        >
+          ⚙️
+        </button>
         <div className="widget-header">
           <h3>Almacenamiento</h3>
         </div>
@@ -73,6 +94,13 @@ const Sidebar = ({ time, metrics }) => {
 
       {/* Network Widget */}
       <div className="widget glass-panel blur-heavy">
+        <button 
+          className="widget-edit-btn"
+          onClick={(e) => { e.stopPropagation(); openEdit('Estado de la red', 'widget-network', e); }}
+          title="Editar widget"
+        >
+          ⚙️
+        </button>
         <div className="widget-header">
           <h3>Estado de la red</h3>
         </div>

@@ -19,6 +19,9 @@ const server = http.createServer(app);
 // Directorios necesarios
 const APPS_DIR = path.join(__dirname, 'apps');
 const UPLOADS_DIR = path.join(__dirname, 'uploads/backgrounds');
+const DEFAULT_ASSETS_DIR = path.join(__dirname, 'default-assets');
+const DEFAULT_BACKGROUND_ASSET = path.join(DEFAULT_ASSETS_DIR, 'background.png');
+const DEFAULT_SVG_ASSET = path.join(DEFAULT_ASSETS_DIR, 'homelab-default.svg');
 const SETTINGS_FILE = path.join(__dirname, 'settings.json');
 const DB_FILE = path.join(__dirname, 'homelab.db');
 
@@ -75,6 +78,73 @@ const saveSetting = (key, value) => {
 if (!fs.existsSync(APPS_DIR)) fs.mkdirSync(APPS_DIR);
 if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
 
+const isWallpaperFilename = (f) => /\.(jpg|jpeg|png|webp|svg)$/i.test(f);
+
+/** Orden en `uploads/backgrounds`: `background.png` primero, luego `homelab-default.svg`, resto alfabético. */
+function sortBackgroundFilenames(files) {
+  const rank = (name) => {
+    const n = name.toLowerCase();
+    if (n === 'background.png') return 0;
+    if (n === 'homelab-default.svg') return 1;
+    return 2;
+  };
+  return [...files].sort((a, b) => {
+    const d = rank(a) - rank(b);
+    return d !== 0 ? d : a.localeCompare(b, undefined, { sensitivity: 'base' });
+  });
+}
+
+function shouldSyncBundledBackgroundPng() {
+  if (!fs.existsSync(DEFAULT_BACKGROUND_ASSET)) return false;
+  const dest = path.join(UPLOADS_DIR, 'background.png');
+  if (!fs.existsSync(dest)) return true;
+  try {
+    return fs.statSync(DEFAULT_BACKGROUND_ASSET).mtimeMs > fs.statSync(dest).mtimeMs;
+  } catch {
+    return true;
+  }
+}
+
+/** Copia `default-assets/background.png` → uploads si falta o el del repo es más nuevo. SVG solo si falta. */
+function ensureDefaultBackgrounds() {
+  try {
+    if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+    if (shouldSyncBundledBackgroundPng()) {
+      fs.copyFileSync(DEFAULT_BACKGROUND_ASSET, path.join(UPLOADS_DIR, 'background.png'));
+    }
+    const destSvg = path.join(UPLOADS_DIR, 'homelab-default.svg');
+    if (fs.existsSync(DEFAULT_SVG_ASSET) && !fs.existsSync(destSvg)) {
+      fs.copyFileSync(DEFAULT_SVG_ASSET, destSvg);
+    }
+  } catch (e) {
+    console.warn('[Wallpaper] No se pudo preparar uploads/backgrounds:', e.message);
+  }
+}
+
+const CANONICAL_WALLPAPER = '/uploads/backgrounds/background.png';
+
+/** Fondos viejos (Unsplash, defaul, URL externa) que deben pasar al predeterminado del proyecto. */
+function shouldMigrateWallpaperToDefault(w) {
+  if (w == null) return true;
+  const s = String(w).trim();
+  if (!s) return true;
+  if (/^https?:\/\//i.test(s)) return true;
+  if (s.includes('unsplash.com')) return true;
+  if (s.includes('/uploads/defaul/')) return true;
+  return false;
+}
+
+function getDefaultWallpaperUrl() {
+  ensureDefaultBackgrounds();
+  if (!fs.existsSync(UPLOADS_DIR)) return null;
+  const preset = path.join(UPLOADS_DIR, 'background.png');
+  if (fs.existsSync(preset)) return '/uploads/backgrounds/background.png';
+  const files = sortBackgroundFilenames(fs.readdirSync(UPLOADS_DIR).filter(isWallpaperFilename));
+  return files.length ? `/uploads/backgrounds/${files[0]}` : null;
+}
+
+ensureDefaultBackgrounds();
+
 // Configuración de Multer para wallpapers
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -110,15 +180,24 @@ app.get('/settings', async (req, res) => {
   try {
     db.all("SELECT key, value FROM settings", (err, rows) => {
       if (err) return res.status(500).json({ error: 'Error al leer base de datos' });
-      
+
+      ensureDefaultBackgrounds();
+
       const settings = {};
       rows.forEach(row => {
         try { settings[row.key] = JSON.parse(row.value); }
         catch (e) { settings[row.key] = row.value; }
       });
 
-      // Valores por defecto si no existen
-      if (!settings.wallpaper) settings.wallpaper = "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=2564&auto=format&fit=crop";
+      const w = settings.wallpaper;
+      if (w == null || String(w).trim() === '') {
+        settings.wallpaper = getDefaultWallpaperUrl() || CANONICAL_WALLPAPER;
+      } else if (shouldMigrateWallpaperToDefault(w)) {
+        settings.wallpaper = getDefaultWallpaperUrl() || CANONICAL_WALLPAPER;
+        saveSetting('wallpaper', settings.wallpaper).catch((e) => {
+          console.warn('[Settings] No se pudo migrar wallpaper en BD:', e.message);
+        });
+      }
       if (!settings.dashboardName) settings.dashboardName = "HomaLab";
       if (!settings.serverPort) settings.serverPort = 3001;
       if (settings.zoomLevel === undefined) settings.zoomLevel = 100;
@@ -127,6 +206,10 @@ app.get('/settings', async (req, res) => {
       if (settings.glassOpacity === undefined) settings.glassOpacity = 40;
       if (settings.glassBlur === undefined) settings.glassBlur = 16;
       if (settings.accentColor === undefined) settings.accentColor = "#38bdf8";
+      if (settings.textColor === undefined) settings.textColor = "#f8fafc";
+      if (settings.sidebarColor === undefined) settings.sidebarColor = "#0b0f19";
+      if (settings.textSecondaryColor === undefined) settings.textSecondaryColor = "#94a3b8";
+      if (settings.bgColor === undefined) settings.bgColor = "#0b0f19";
 
       res.json(settings);
     });
@@ -202,6 +285,9 @@ app.post('/settings/update', async (req, res) => {
   if (!key) return res.status(400).json({ error: 'Falta la clave' });
   try {
     await saveSetting(key, value);
+    if (key === 'wallpaper' && typeof value === 'string' && value.startsWith('/')) {
+      await saveSetting('isLocal', true);
+    }
     res.json({ success: true, key, value });
   } catch (err) {
     res.status(500).json({ error: 'Error al guardar el ajuste' });
@@ -220,12 +306,54 @@ app.post('/settings/zoom', async (req, res) => {
 
 app.post('/settings/reset', async (req, res) => {
   try {
-    const originalWallpaper = "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=2564&auto=format&fit=crop";
+    ensureDefaultBackgrounds();
+    const originalWallpaper = getDefaultWallpaperUrl();
+    if (!originalWallpaper) {
+      return res.status(500).json({ error: 'No hay fondo por defecto en uploads/backgrounds' });
+    }
+
     await saveSetting('wallpaper', originalWallpaper);
-    await saveSetting('isLocal', false);
+    await saveSetting('isLocal', true);
     res.json({ message: 'Fondo de pantalla restablecido', wallpaper: originalWallpaper });
   } catch (err) {
     res.status(500).json({ error: 'Error al restablecer ajustes' });
+  }
+});
+
+app.get('/settings/wallpapers', async (req, res) => {
+  try {
+    ensureDefaultBackgrounds();
+    const bgFiles = sortBackgroundFilenames(fs.readdirSync(UPLOADS_DIR).filter(isWallpaperFilename));
+    const backgrounds = bgFiles.map((f) => `/uploads/backgrounds/${f}`);
+    const defaul = [];
+    res.json({ backgrounds, defaul });
+  } catch (err) {
+    res.status(500).json({ error: 'Error al leer wallpapers' });
+  }
+});
+
+app.post('/settings/wallpaper/set-default', async (req, res) => {
+  const { wallpaper } = req.body;
+  if (!wallpaper) return res.status(400).json({ error: 'Falta la ruta del wallpaper' });
+
+  try {
+    const sourcePath = path.join(__dirname, 'uploads', wallpaper.replace(/^\/uploads\//, ''));
+    const destPath = path.join(UPLOADS_DIR, 'background.png');
+
+    if (!fs.existsSync(sourcePath)) {
+      return res.status(404).json({ error: 'Archivo no encontrado' });
+    }
+
+    if (path.resolve(sourcePath) !== path.resolve(destPath)) {
+      fs.copyFileSync(sourcePath, destPath);
+    }
+
+    const canonical = '/uploads/backgrounds/background.png';
+    await saveSetting('wallpaper', canonical);
+    await saveSetting('isLocal', true);
+    res.json({ success: true, wallpaper: canonical });
+  } catch (err) {
+    res.status(500).json({ error: 'Error al establecer default' });
   }
 });
 

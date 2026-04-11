@@ -5,7 +5,8 @@
   right: 0;
   bottom: 0;
   background: rgba(0, 0, 0, 0.7);
-  backdrop-filter: blur(8px);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
   display: flex;
   align-items: center;
   justify-content: center;
@@ -95,7 +96,7 @@
 }
 
 .form-group input:focus {
-  border-color: #38bdf8;
+  border-color: var(--accent-color);
 }
 
 .compose-editor {
@@ -121,7 +122,7 @@
 
 .editor-toolbar .import-btn {
   cursor: pointer;
-  color: #38bdf8;
+  color: var(--accent-color);
   font-weight: 500;
 }
 
@@ -162,7 +163,7 @@
 }
 
 .btn-primary {
-  background: #38bdf8;
+  background: var(--accent-color);
   border: none;
   color: #000;
 }
@@ -213,7 +214,7 @@
 
 .tip {
   margin-left: 10px;
-  color: #38bdf8;
+  color: var(--accent-color);
 }
 
 /* Settings Modal Specific */
@@ -232,6 +233,104 @@
 .wallpaper-preview {
   box-shadow: inset 0 0 20px rgba(0,0,0,0.5);
   border: 1px solid rgba(255,255,255,0.1);
+}
+
+.wallpaper-picker-hint {
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 0.85rem;
+  margin-bottom: 0.75rem;
+  line-height: 1.45;
+}
+
+.wallpaper-picker-hint code {
+  font-size: 0.78rem;
+  padding: 0.1em 0.35em;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.25);
+}
+
+.wallpaper-picker-block {
+  margin-bottom: 1.25rem;
+}
+
+.wallpaper-picker-label {
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.65);
+  margin-bottom: 0.5rem;
+}
+
+.wallpaper-picker-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.55rem;
+}
+
+@media (min-width: 520px) {
+  .wallpaper-picker-grid {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+}
+
+.wallpaper-picker-tile {
+  position: relative;
+  aspect-ratio: 1;
+  border-radius: 10px;
+  overflow: hidden;
+  cursor: pointer;
+  border: 2px solid transparent;
+  background: rgba(0, 0, 0, 0.3);
+  transition: border-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.wallpaper-picker-tile:hover {
+  transform: scale(1.04);
+}
+
+.wallpaper-picker-tile.is-selected {
+  border-color: var(--accent-color);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.12);
+}
+
+.wallpaper-picker-tile img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.transparent-bg-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  background: linear-gradient(135deg, rgba(100, 100, 100, 0.3) 0%, rgba(60, 60, 60, 0.3) 100%);
+  backdrop-filter: blur(4px);
+}
+
+.transparent-icon {
+  font-size: 2rem;
+  opacity: 0.7;
+}
+
+.transparent-text {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.6);
+  text-align: center;
+  font-weight: 500;
+}
+
+.wallpaper-picker-pin {
+  position: absolute;
+  bottom: 3px;
+  right: 3px;
+  padding: 2px 6px !important;
+  font-size: 0.65rem !important;
+  line-height: 1;
+  min-height: 0;
+  opacity: 0.92;
 }
 
 .btn-danger {
@@ -269,8 +368,8 @@
 }
 
 .tab-btn.active {
-  color: #38bdf8;
-  border-bottom-color: #38bdf8;
+  color: var(--accent-color);
+  border-bottom-color: var(--accent-color);
 }
 
 .settings-section {
@@ -294,13 +393,93 @@
 }
 
 .control-header span:last-child {
-  color: #38bdf8;
+  color: var(--accent-color);
   font-weight: 700;
   font-family: monospace;
 }
 
 input[type="range"] {
   width: 100%;
-  accent-color: #38bdf8;
+  accent-color: var(--accent-color);
   cursor: pointer;
+}
+
+/* Color Picker Rows */
+.color-group-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: rgba(255, 255, 255, 0.35);
+  margin-bottom: 0.6rem;
+}
+
+.color-picker-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.6rem 0.75rem;
+  border-radius: 10px;
+  transition: background 0.15s;
+  cursor: default;
+}
+
+.color-picker-row:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.color-picker-row span {
+  font-size: 0.88rem;
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.color-picker-row input[type="color"] {
+  width: 36px;
+  height: 36px;
+  padding: 2px;
+  border: 2px solid rgba(255, 255, 255, 0.15);
+  border-radius: 50%;
+  cursor: pointer;
+  background: transparent;
+  appearance: none;
+  -webkit-appearance: none;
+  transition: border-color 0.2s, transform 0.15s;
+  overflow: hidden;
+}
+
+.color-picker-row input[type="color"]::-webkit-color-swatch-wrapper {
+  padding: 0;
+  border-radius: 50%;
+}
+
+.color-picker-row input[type="color"]::-webkit-color-swatch {
+  border: none;
+  border-radius: 50%;
+}
+
+.color-picker-row input[type="color"]:hover {
+  border-color: var(--accent-color);
+  transform: scale(1.1);
+}
+
+.btn-clear-color {
+  background: rgba(255, 77, 77, 0.2);
+  border: 1px solid rgba(255, 77, 77, 0.4);
+  color: #ff4d4d;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-clear-color:hover {
+  background: rgba(255, 77, 77, 0.35);
+  border-color: rgba(255, 77, 77, 0.6);
+  transform: scale(1.1);
 }
