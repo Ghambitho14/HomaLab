@@ -1,0 +1,34 @@
+version: '3.8'
+
+services:
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - homalab-network
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./backend/apps:/app/apps
+      - ./backend/uploads:/app/uploads
+      - ./backend/default-assets:/app/default-assets
+      - ./backend/settings.json:/app/settings.json
+      - ./backend/homelab.db:/app/homelab.db
+    networks:
+      - homalab-network
+    environment:
+      - NODE_ENV=production
+
+networks:
+  homalab-network:
+    driver: bridge
