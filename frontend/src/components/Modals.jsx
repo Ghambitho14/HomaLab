@@ -8,6 +8,7 @@ const Modals = ({
   installName, setInstallName,
   installPort, setInstallPort,
   installCompose, setInstallCompose,
+  installEnvironment, setInstallEnvironment,
   isInstalling, handleDeploy,
   logsContainerName, logLines, logsEndRef,
   editFriendlyName, setEditFriendlyName,
@@ -346,6 +347,55 @@ const Modals = ({
                   value={installPort}
                   onChange={(e) => setInstallPort(e.target.value)}
                 />
+              </div>
+            </div>
+            <div className="form-group">
+              <label>Variables de Entorno (Opcional)</label>
+              <div className="env-vars-container">
+                {installEnvironment.map((env, idx) => (
+                  <div key={idx} className="env-var-row">
+                    <input 
+                      type="text" 
+                      placeholder="VAR_NAME" 
+                      value={env.key}
+                      onChange={(e) => {
+                        const newEnv = [...installEnvironment];
+                        newEnv[idx].key = e.target.value;
+                        setInstallEnvironment(newEnv);
+                      }}
+                      className="env-key-input"
+                    />
+                    <span className="env-separator">=</span>
+                    <input 
+                      type="text" 
+                      placeholder="valor" 
+                      value={env.value}
+                      onChange={(e) => {
+                        const newEnv = [...installEnvironment];
+                        newEnv[idx].value = e.target.value;
+                        setInstallEnvironment(newEnv);
+                      }}
+                      className="env-value-input"
+                    />
+                    <button 
+                      type="button"
+                      className="btn-remove-env"
+                      onClick={() => {
+                        const newEnv = installEnvironment.filter((_, i) => i !== idx);
+                        setInstallEnvironment(newEnv);
+                      }}
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))}
+                <button 
+                  type="button"
+                  className="btn-add-env"
+                  onClick={() => setInstallEnvironment([...installEnvironment, { key: '', value: '' }])}
+                >
+                  + Agregar Variable
+                </button>
               </div>
             </div>
             <div className="form-group">

@@ -361,7 +361,7 @@ app.post('/settings/wallpaper/set-default', async (req, res) => {
 // ENDPOINT: Instalación de Apps (HTTP)
 // ==========================================
 app.post('/apps/install', async (req, res) => {
-  const { name, port, composeContent } = req.body;
+  const { name, port, composeContent, environment } = req.body;
 
   if (!name || !port || !composeContent) {
     return res.status(400).json({ error: 'Faltan campos obligatorios (name, port, composeContent)' });
@@ -380,19 +380,74 @@ app.post('/apps/install', async (req, res) => {
 
     const appDir = path.join(APPS_DIR, name);
     const composePath = path.join(appDir, 'docker-compose.yml');
-    // 1. Crear carpeta de la app
+    
+    // ========================================
+    // PASO 1: Crear carpeta de la app en backend (/backend/apps/{appName})
+    // ========================================
     if (!fs.existsSync(appDir)) fs.mkdirSync(appDir, { recursive: true });
 
-    // 2. Parsear YAML e inyectar puerto
+    // ========================================
+    // PASO 2: Detectar el directorio HOME del usuario
+    // En Linux: /home/usuario
+    // En Windows: C:\Users\usuario
+    // ========================================
+    const homeDir = process.env.HOME || process.env.USERPROFILE;
+    const homaLabDir = path.join(homeDir, '.HomaLab');
+    const appDataDir = path.join(homaLabDir, name);
+    const appConfigDir = path.join(appDataDir, 'config');
+    const appStorageDir = path.join(appDataDir, 'data');
+    const appLogsDir = path.join(appDataDir, 'logs');
+    const appBackupsDir = path.join(appDataDir, 'backups');
+
+    // ========================================
+    // PASO 3: Crear la estructura de directorios en /home/.HomaLab/{appName}
+    // Estructura final:
+    // ~/.HomaLab/
+    //   └── {appName}/
+    //       ├── config/     <- Archivos de configuración de la app
+    //       ├── data/       <- Datos persistentes (BD, archivos, etc)
+    //       ├── logs/       <- Archivos de logs
+    //       └── backups/    <- Copias de seguridad
+    // ========================================
+    if (!fs.existsSync(homaLabDir)) fs.mkdirSync(homaLabDir, { recursive: true });
+    if (!fs.existsSync(appDataDir)) fs.mkdirSync(appDataDir, { recursive: true });
+    if (!fs.existsSync(appConfigDir)) fs.mkdirSync(appConfigDir, { recursive: true });
+    if (!fs.existsSync(appStorageDir)) fs.mkdirSync(appStorageDir, { recursive: true });
+    if (!fs.existsSync(appLogsDir)) fs.mkdirSync(appLogsDir, { recursive: true });
+    if (!fs.existsSync(appBackupsDir)) fs.mkdirSync(appBackupsDir, { recursive: true });
+
+    // ========================================
+    // PASO 4: Crear archivo app-info.json con metadatos de la instalación
+    // Este archivo contiene información sobre la app y las rutas de sus datos
+    // ========================================
+    const appInfo = {
+      name,
+      port,
+      installDate: new Date().toISOString(),
+      status: 'installing',
+      appDir: appDataDir,
+      configDir: appConfigDir,
+      dataDir: appStorageDir,
+      logsDir: appLogsDir,
+      backupsDir: appBackupsDir
+    };
+    fs.writeFileSync(path.join(appDataDir, 'app-info.json'), JSON.stringify(appInfo, null, 2));
+
+    // ========================================
+    // PASO 5: Parsear el YAML del docker-compose
+    // ========================================
     const doc = yaml.load(composeContent);
-    const serviceName = Object.keys(doc.services)[0]; // Tomamos el primer servicio
+    const serviceName = Object.keys(doc.services)[0]; // Tomamos el primer servicio del compose
     
     if (!doc.services[serviceName].ports) {
       doc.services[serviceName].ports = [];
     }
     
-    // El formato esperado es [puertoHost:puertoInterno]
-    // Intentamos detectar el puerto interno si ya existe, si no asumimos 80 (por defecto para muchas apps)
+    // ========================================
+    // PASO 6: Detectar puerto interno y mapear con el puerto externo
+    // Formato: [puertoHost:puertoInterno]
+    // Ej: [3000:3000] => puertoHost=3000, puertoInterno=3000
+    // ========================================
     let internalPort = '80';
     if (doc.services[serviceName].ports && doc.services[serviceName].ports.length > 0) {
       const firstPort = doc.services[serviceName].ports[0].toString();
@@ -401,7 +456,34 @@ app.post('/apps/install', async (req, res) => {
     
     doc.services[serviceName].ports = [`${port}:${internalPort}`];
     
-    // MEJORA: Inyectar etiqueta de nombre amigable
+    // ========================================
+    // PASO 7: Procesar variables de entorno personalizables
+    // Se pueden pasar del frontend y se inyectan en el contenedor
+    // Formato esperado: { VAR_NAME: 'value', ... }
+    // ========================================
+    let envVars = {};
+    if (environment && typeof environment === 'object') {
+      envVars = environment;
+    }
+    
+    // Crear archivo .env en la carpeta de datos de la app
+    let envContent = `# Variables de entorno para ${name}\n`;
+    envContent += `# Generado: ${new Date().toISOString()}\n\n`;
+    Object.entries(envVars).forEach(([key, value]) => {
+      envContent += `${key}=${value}\n`;
+    });
+    fs.writeFileSync(path.join(appDataDir, '.env'), envContent);
+    
+    // Inyectar variables en el docker-compose
+    if (!doc.services[serviceName].environment) {
+      doc.services[serviceName].environment = {};
+    }
+    Object.assign(doc.services[serviceName].environment, envVars);
+    
+    // ========================================
+    // PASO 8: Inyectar etiqueta de nombre amigable al contenedor
+    // Esto permite identificar fácilmente la app en Docker
+    // ========================================
     if (!doc.services[serviceName].labels) doc.services[serviceName].labels = {};
     if (Array.isArray(doc.services[serviceName].labels)) {
       doc.services[serviceName].labels.push(`homelab.name=${name}`);
@@ -409,14 +491,41 @@ app.post('/apps/install', async (req, res) => {
       doc.services[serviceName].labels['homelab.name'] = name;
     }
     
-    // 3. Guardar archivo modificado
+    // ========================================
+    // PASO 9: Guardar el docker-compose.yml modificado
+    // Se guarda en dos lugares:
+    // 1. En /backend/apps/{appName} (para Docker)
+    // 2. En /home/.HomaLab/{appName} (para backup/referencia del usuario)
+    // ========================================
     fs.writeFileSync(composePath, yaml.dump(doc));
+    fs.writeFileSync(path.join(appDataDir, 'docker-compose.yml'), yaml.dump(doc));
 
-    // 4. Ejecutar docker compose up -d
+    // ========================================
+    // PASO 10: Ejecutar el docker-compose que inicia los contenedores
+    // ========================================
     console.log(`[Instalando] ${name} en puerto ${port}...`);
+    console.log(`[Estructura] Carpeta de datos creada en: ${appDataDir}`);
+    if (Object.keys(envVars).length > 0) {
+      console.log(`[Variables de Entorno] ${Object.keys(envVars).length} variables inyectadas`);
+    }
     execSync('docker compose up -d', { cwd: appDir });
 
-    res.json({ message: `App ${name} desplegada con éxito en el puerto ${port}` });
+    // ========================================
+    // PASO 11: Retornar respuesta exitosa al cliente frontend
+    // Incluye toda la información de las rutas creadas y variables inyectadas
+    // ========================================
+    res.json({ 
+      message: `App ${name} desplegada con éxito en el puerto ${port}`,
+      appInfo: {
+        dataPath: appDataDir,
+        configPath: appConfigDir,
+        dataPath: appStorageDir,
+        logsPath: appLogsDir,
+        backupsPath: appBackupsDir
+      },
+      environment: envVars,
+      envFile: path.join(appDataDir, '.env')
+    });
   } catch (error) {
     console.error(`[Error Instalación ${name}]`, error.message);
     res.status(500).json({ error: error.message });

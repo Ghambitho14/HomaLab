@@ -167,6 +167,7 @@ export const useAppLogic = () => {
   const [installName, setInstallName] = useState('');
   const [installPort, setInstallPort] = useState('');
   const [installCompose, setInstallCompose] = useState('');
+  const [installEnvironment, setInstallEnvironment] = useState([{ key: '', value: '' }]);
   const [isInstalling, setIsInstalling] = useState(false);
 
   // Estados de edición
@@ -460,6 +461,14 @@ export const useAppLogic = () => {
       return;
     }
 
+    // Convertir array de variables en objeto, filtrando vacíos
+    const environment = {};
+    installEnvironment.forEach(({ key, value }) => {
+      if (key.trim() !== '') {
+        environment[key.trim()] = value;
+      }
+    });
+
     setIsInstalling(true);
     try {
       const response = await fetch(`${BACKEND_URL}/apps/install`, {
@@ -468,7 +477,8 @@ export const useAppLogic = () => {
         body: JSON.stringify({
           name: installName,
           port: installPort,
-          composeContent: installCompose
+          composeContent: installCompose,
+          environment: environment
         })
       });
 
@@ -479,6 +489,7 @@ export const useAppLogic = () => {
         setInstallName('');
         setInstallPort('');
         setInstallCompose('');
+        setInstallEnvironment([{ key: '', value: '' }]);
       } else {
         alert('❌ Error: ' + data.error);
       }
@@ -540,6 +551,7 @@ export const useAppLogic = () => {
     installName, setInstallName,
     installPort, setInstallPort,
     installCompose, setInstallCompose,
+    installEnvironment, setInstallEnvironment,
     isInstalling,
     isEditModalOpen, setIsEditModalOpen,
     editFriendlyName, setEditFriendlyName,
