@@ -176,6 +176,7 @@ export const useAppLogic = () => {
   const [editFriendlyName, setEditFriendlyName] = useState('');
   const [editPort, setEditPort] = useState('');
   const [editCompose, setEditCompose] = useState('');
+  const [editEnvironment, setEditEnvironment] = useState([{ key: '', value: '' }]);
   const [isUpdating, setIsUpdating] = useState(false);
 
   const socketRef = useRef(null);
@@ -419,6 +420,18 @@ export const useAppLogic = () => {
         const app = apps.find(a => a.rawName === rawName);
         setEditPort(app?.port !== 'n/a' ? app.port : '');
         setEditCompose(data.composeContent);
+        
+        // Cargar variables de entorno si existen
+        if (data.environment && Object.keys(data.environment).length > 0) {
+          const envArray = Object.entries(data.environment).map(([key, value]) => ({
+            key,
+            value: String(value)
+          }));
+          setEditEnvironment(envArray.length > 0 ? envArray : [{ key: '', value: '' }]);
+        } else {
+          setEditEnvironment([{ key: '', value: '' }]);
+        }
+        
         setIsEditModalOpen(true);
       } else {
         alert('❌ Error al cargar configuración: ' + data.error);
@@ -429,6 +442,14 @@ export const useAppLogic = () => {
   };
 
   const handleUpdate = async () => {
+    // Convertir array de variables en objeto
+    const environment = {};
+    editEnvironment.forEach(({ key, value }) => {
+      if (key.trim() !== '') {
+        environment[key.trim()] = value;
+      }
+    });
+
     setIsUpdating(true);
     try {
       const response = await fetch(`${BACKEND_URL}/apps/${editAppName}/update`, {
@@ -437,7 +458,8 @@ export const useAppLogic = () => {
         body: JSON.stringify({ 
           composeContent: editCompose,
           newName: editFriendlyName,
-          newPort: editPort
+          newPort: editPort,
+          environment: environment
         })
       });
 
@@ -445,6 +467,7 @@ export const useAppLogic = () => {
       if (response.ok) {
         alert('✅ Configuración actualizada y app re-desplegada');
         setIsEditModalOpen(false);
+        setEditEnvironment([{ key: '', value: '' }]);
       } else {
         alert('❌ Error: ' + data.error);
       }
@@ -557,6 +580,7 @@ export const useAppLogic = () => {
     editFriendlyName, setEditFriendlyName,
     editPort, setEditPort,
     editCompose, setEditCompose,
+    editEnvironment, setEditEnvironment,
     isUpdating,
     logsEndRef,
     handleUpdate,

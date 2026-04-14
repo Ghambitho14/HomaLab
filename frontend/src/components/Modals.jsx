@@ -14,6 +14,7 @@ const Modals = ({
   editFriendlyName, setEditFriendlyName,
   editPort, setEditPort,
   editCompose, setEditCompose,
+  editEnvironment, setEditEnvironment,
   isUpdating, handleUpdate,
   isSettingsModalOpen, setIsSettingsModalOpen,
   handleWallpaperUpload, handleResetWallpaper,
@@ -465,6 +466,56 @@ const Modals = ({
                   onChange={(e) => setEditPort(e.target.value)} 
                   placeholder="Ej. 8080"
                 />
+              </div>
+            </div>
+
+            <div className="form-group">
+              <label>Variables de Entorno (Opcional)</label>
+              <div className="env-vars-container">
+                {editEnvironment.map((env, idx) => (
+                  <div key={idx} className="env-var-row">
+                    <input 
+                      type="text" 
+                      placeholder="VAR_NAME" 
+                      value={env.key}
+                      onChange={(e) => {
+                        const newEnv = [...editEnvironment];
+                        newEnv[idx].key = e.target.value;
+                        setEditEnvironment(newEnv);
+                      }}
+                      className="env-key-input"
+                    />
+                    <span className="env-separator">=</span>
+                    <input 
+                      type="text" 
+                      placeholder="valor" 
+                      value={env.value}
+                      onChange={(e) => {
+                        const newEnv = [...editEnvironment];
+                        newEnv[idx].value = e.target.value;
+                        setEditEnvironment(newEnv);
+                      }}
+                      className="env-value-input"
+                    />
+                    <button 
+                      type="button"
+                      className="btn-remove-env"
+                      onClick={() => {
+                        const newEnv = editEnvironment.filter((_, i) => i !== idx);
+                        setEditEnvironment(newEnv);
+                      }}
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))}
+                <button 
+                  type="button"
+                  className="btn-add-env"
+                  onClick={() => setEditEnvironment([...editEnvironment, { key: '', value: '' }])}
+                >
+                  + Agregar Variable
+                </button>
               </div>
             </div>
 

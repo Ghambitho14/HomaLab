@@ -466,12 +466,20 @@ app.post('/apps/install', async (req, res) => {
       envVars = environment;
     }
     
-    // Crear archivo .env en la carpeta de datos de la app
+    // Crear archivo .env en TRES ubicaciones para asegurar compatibilidad:
+    // 1. En /backend/apps/{appName}/.env (lo que Docker Compose va a leer)
+    // 2. En ~/.HomaLab/{app}/.env (backup para el usuario)
     let envContent = `# Variables de entorno para ${name}\n`;
     envContent += `# Generado: ${new Date().toISOString()}\n\n`;
     Object.entries(envVars).forEach(([key, value]) => {
       envContent += `${key}=${value}\n`;
     });
+    
+    // Guardar en /backend/apps/{appName}/.env (IMPORTANTE para docker-compose)
+    const envFilePath = path.join(appDir, '.env');
+    fs.writeFileSync(envFilePath, envContent);
+    
+    // También guardar en ~/.HomaLab para referencia
     fs.writeFileSync(path.join(appDataDir, '.env'), envContent);
     
     // Inyectar variables en el docker-compose
@@ -481,7 +489,21 @@ app.post('/apps/install', async (req, res) => {
     Object.assign(doc.services[serviceName].environment, envVars);
     
     // ========================================
-    // PASO 8: Inyectar etiqueta de nombre amigable al contenedor
+    // PASO 8: Agregar referencia al archivo .env en docker-compose.yml
+    // Esto asegura que Docker Compose lea las variables
+    // ========================================
+    if (!doc.services[serviceName].env_file) {
+      doc.services[serviceName].env_file = [];
+    }
+    if (!Array.isArray(doc.services[serviceName].env_file)) {
+      doc.services[serviceName].env_file = [doc.services[serviceName].env_file];
+    }
+    if (!doc.services[serviceName].env_file.includes('.env')) {
+      doc.services[serviceName].env_file.push('.env');
+    }
+    
+    // ========================================
+    // PASO 9: Inyectar etiqueta de nombre amigable al contenedor
     // Esto permite identificar fácilmente la app en Docker
     // ========================================
     if (!doc.services[serviceName].labels) doc.services[serviceName].labels = {};
@@ -492,7 +514,7 @@ app.post('/apps/install', async (req, res) => {
     }
     
     // ========================================
-    // PASO 9: Guardar el docker-compose.yml modificado
+    // PASO 10: Guardar el docker-compose.yml modificado
     // Se guarda en dos lugares:
     // 1. En /backend/apps/{appName} (para Docker)
     // 2. En /home/.HomaLab/{appName} (para backup/referencia del usuario)
@@ -734,10 +756,41 @@ setInterval(async () => {
 app.get('/apps/:name/config', (req, res) => {
   const appDir = path.join(APPS_DIR, req.params.name);
   const composePath = path.join(appDir, 'docker-compose.yml');
+  
+  // Intentar leer variables de entorno desde ~/.HomaLab/{name}/.env
+  const homeDir = process.env.HOME || process.env.USERPROFILE;
+  const homaLabDir = path.join(homeDir, '.HomaLab');
+  const appDataDir = path.join(homaLabDir, req.params.name);
+  const envFilePath = path.join(appDataDir, '.env');
+  
+  let environment = {};
 
   if (fs.existsSync(composePath)) {
     const content = fs.readFileSync(composePath, 'utf8');
-    res.json({ composeContent: content });
+    
+    // Leer variables de entorno del archivo .env si existe
+    if (fs.existsSync(envFilePath)) {
+      try {
+        const envContent = fs.readFileSync(envFilePath, 'utf8');
+        const lines = envContent.split('\n');
+        lines.forEach(line => {
+          const trimmed = line.trim();
+          if (trimmed && !trimmed.startsWith('#')) {
+            const [key, ...valueParts] = trimmed.split('=');
+            if (key) {
+              environment[key] = valueParts.join('=');
+            }
+          }
+        });
+      } catch (e) {
+        console.error(`[Error reading .env] ${req.params.name}:`, e.message);
+      }
+    }
+    
+    res.json({ 
+      composeContent: content,
+      environment: environment
+    });
   } else {
     res.status(404).json({ error: 'Configuración no encontrada' });
   }
@@ -745,9 +798,15 @@ app.get('/apps/:name/config', (req, res) => {
 
 // Actualizar configuración y re-desplegar
 app.post('/apps/:name/update', (req, res) => {
-  const { composeContent, newName, newPort } = req.body;
+  const { composeContent, newName, newPort, environment } = req.body;
   const appDir = path.join(APPS_DIR, req.params.name);
   const composePath = path.join(appDir, 'docker-compose.yml');
+  
+  // Obtener la carpeta de datos en ~/.HomaLab
+  const homeDir = process.env.HOME || process.env.USERPROFILE;
+  const homaLabDir = path.join(homeDir, '.HomaLab');
+  const appDataDir = path.join(homaLabDir, req.params.name);
+  const envFilePath = path.join(appDataDir, '.env');
 
   if (!fs.existsSync(appDir)) {
     return res.status(404).json({ error: 'La aplicación no existe' });
@@ -755,16 +814,16 @@ app.post('/apps/:name/update', (req, res) => {
 
   try {
     let finalYaml = composeContent;
+    let envVars = environment || {};
 
-    // Si se enviaron nombre o puerto, los inyectamos en el YAML
-    if (newName || newPort) {
+    // Si se enviaron nombre, puerto o variables, actualizar el YAML
+    if (newName || newPort || Object.keys(envVars).length > 0) {
       const doc = yaml.load(composeContent);
       const serviceName = Object.keys(doc.services)[0];
 
       if (newName) {
         if (!doc.services[serviceName].labels) doc.services[serviceName].labels = {};
         if (Array.isArray(doc.services[serviceName].labels)) {
-          // Si es un array, buscamos si ya existe la etiqueta para actualizarla
           const labelIdx = doc.services[serviceName].labels.findIndex(l => l.startsWith('homelab.name='));
           if (labelIdx !== -1) doc.services[serviceName].labels[labelIdx] = `homelab.name=${newName}`;
           else doc.services[serviceName].labels.push(`homelab.name=${newName}`);
@@ -782,14 +841,44 @@ app.post('/apps/:name/update', (req, res) => {
         doc.services[serviceName].ports = [`${newPort}:${internalPort}`];
       }
 
+      // ========================================
+      // Inyectar variables de entorno en el YAML
+      // ========================================
+      if (Object.keys(envVars).length > 0) {
+        if (!doc.services[serviceName].environment) {
+          doc.services[serviceName].environment = {};
+        }
+        Object.assign(doc.services[serviceName].environment, envVars);
+      }
+
       finalYaml = yaml.dump(doc);
     }
 
-    // 1. Guardar el contenido final
+    // 1. Guardar variables en archivo .env (en ambas ubicaciones)
+    if (Object.keys(envVars).length > 0) {
+      let envContent = `# Variables de entorno para ${req.params.name}\n`;
+      envContent += `# Actualizado: ${new Date().toISOString()}\n\n`;
+      Object.entries(envVars).forEach(([key, value]) => {
+        envContent += `${key}=${value}\n`;
+      });
+      
+      // Guardar en /backend/apps/{appName}/.env (IMPORTANTE)
+      fs.writeFileSync(path.join(appDir, '.env'), envContent);
+      
+      // También en ~/.HomaLab para referencia
+      if (fs.existsSync(appDataDir)) {
+        fs.writeFileSync(envFilePath, envContent);
+      }
+    }
+
+    // 2. Guardar el contenido final del YAML
     fs.writeFileSync(composePath, finalYaml);
 
-    // 2. Re-desplegar (Docker Compose detecta cambios y recrea solo lo necesario)
+    // 3. Re-desplegar (Docker Compose detecta cambios y recrea solo lo necesario)
     console.log(`[Actualizando] ${req.params.name}...`);
+    if (Object.keys(envVars).length > 0) {
+      console.log(`[Variables] ${Object.keys(envVars).length} variables inyectadas`);
+    }
     execSync('docker compose up -d', { cwd: appDir });
 
     res.json({ message: 'Configuración actualizada y contenedor re-desplegado' });
