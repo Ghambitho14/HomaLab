@@ -94,13 +94,41 @@ function App() {
                             openEdit={logic.openEdit}
                             openLogs={logic.openLogs}
                             deleteApp={logic.deleteApp}
+                            isHidden={logic.hiddenApps.includes(app.id)}
+                            onToggleHide={logic.toggleHideApp}
                           />
                         ))}
                       </div>
                     </div>
                   ))}
 
-                  {logic.filteredApps.length === 0 && !logic.dockerError && (
+                  {/* SECCIÓN DE APPS OCULTAS */}
+                  {logic.hiddenAppsList.length > 0 && (
+                    <div className="category-section hidden-section">
+                      <div className="apps-header">
+                        <h2>🙈 Ocultas ({logic.hiddenAppsList.length})</h2>
+                      </div>
+                      
+                      <div className="apps-grid">
+                        {logic.hiddenAppsList.map(app => (
+                          <AppCard 
+                            key={app.id}
+                            app={app}
+                            activeMenuId={logic.activeMenuId}
+                            setActiveMenuId={logic.setActiveMenuId}
+                            toggleStatus={logic.toggleStatus}
+                            openEdit={logic.openEdit}
+                            openLogs={logic.openLogs}
+                            deleteApp={logic.deleteApp}
+                            isHidden={true}
+                            onToggleHide={logic.toggleHideApp}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {logic.filteredApps.length === 0 && logic.hiddenAppsList.length === 0 && !logic.dockerError && (
                     <div className="empty-state glass-panel blur-medium">
                       <p>
                         {logic.connected 

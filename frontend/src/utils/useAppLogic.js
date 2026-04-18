@@ -550,9 +550,55 @@ export const useAppLogic = () => {
     setLogLines([]);
   };
 
-  const filteredApps = apps.filter(app =>
+  // Estado para apps ocultas
+  const [hiddenApps, setHiddenApps] = useState([]);
+
+  // Cargar apps ocultas al inicio
+  useEffect(() => {
+    fetch(`${BACKEND_URL}/settings`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.hiddenApps && Array.isArray(data.hiddenApps)) {
+          setHiddenApps(data.hiddenApps);
+        }
+      })
+      .catch(err => console.error('Error cargando apps ocultas:', err));
+  }, []);
+
+  // Función para ocultar/mostrar app
+  const toggleHideApp = async (appId, isHidden) => {
+    const newHiddenApps = isHidden 
+      ? [...hiddenApps, appId]
+      : hiddenApps.filter(id => id !== appId);
+    
+    setHiddenApps(newHiddenApps);
+    
+    // Guardar en backend
+    try {
+      await fetch(`${BACKEND_URL}/settings/update`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key: 'hiddenApps', value: newHiddenApps })
+      });
+    } catch (err) {
+      console.error('Error guardando apps ocultas:', err);
+    }
+  };
+
+  // Filtrar apps visibles (excluyendo ocultas)
+  const visibleApps = apps.filter(app =>
+    !hiddenApps.includes(app.id) &&
     app.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  // Apps ocultas
+  const hiddenAppsList = apps.filter(app =>
+    hiddenApps.includes(app.id) &&
+    app.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  // Combinar para mantener compatibilidad con código existente
+  const filteredApps = visibleApps;
 
   return {
     apps,
@@ -600,6 +646,9 @@ export const useAppLogic = () => {
     handleUpdateSetting,
     availableWallpapers, handleSetWallpaperAsDefault,
     BACKEND_URL,
-    filteredApps
+    filteredApps,
+    hiddenApps,
+    hiddenAppsList,
+    toggleHideApp
   };
 };

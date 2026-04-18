@@ -10,7 +10,9 @@ const AppCard = ({
   toggleStatus, 
   openEdit, 
   openLogs, 
-  deleteApp 
+  deleteApp,
+  isHidden,
+  onToggleHide
 }) => {
   return (
     <div 
@@ -71,14 +73,25 @@ const AppCard = ({
                 
                 <div className="menu-divider"></div>
                 
+                <button className="menu-item" onClick={(e) => { setActiveMenuId(null); onToggleHide(app.id, !isHidden); }}>
+                  {isHidden ? '👁 Mostrar App' : '🙈 Ocultar App'}
+                </button>
+                
+                <div className="menu-divider"></div>
+                
                 <button className="menu-item delete-btn" onClick={(e) => { setActiveMenuId(null); deleteApp(app.id, app.name, e); }}>
                   🗑 Eliminar Aplicación
                 </button>
               </>
             ) : (
-              <div style={{ padding: '4px 8px', fontSize: '0.75rem', color: '#666', fontStyle: 'italic' }}>
-                Este es un servicio nativo del sistema. Gestiona Coolify desde su panel original.
-              </div>
+              <>
+                <button className="menu-item" onClick={(e) => { setActiveMenuId(null); onToggleHide(app.id, !isHidden); }}>
+                  {isHidden ? '👁 Mostrar App' : '🙈 Ocultar App'}
+                </button>
+                <div style={{ padding: '4px 8px', fontSize: '0.75rem', color: '#666', fontStyle: 'italic' }}>
+                  Este es un servicio nativo del sistema.
+                </div>
+              </>
             )}
           </div>
         )}

@@ -711,3 +711,27 @@
     text-align: center;
   }
 }
+
+/* Estilos para sección de apps ocultas */
+.hidden-section {
+  opacity: 0.7;
+  margin-top: 2rem;
+  padding-top: 2rem;
+  border-top: 2px dashed rgba(255, 255, 255, 0.2);
+}
+
+.hidden-section .apps-header h2 {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 1rem;
+}
+
+.hidden-section .app-card {
+  filter: grayscale(0.5);
+  transform: scale(0.95);
+}
+
+.hidden-section .app-card:hover {
+  filter: grayscale(0);
+  transform: scale(1);
+  opacity: 1;
+}

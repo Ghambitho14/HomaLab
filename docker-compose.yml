@@ -6,7 +6,7 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
     ports:
-      - "80:80"
+      - "0.0.0.0:8014:80"
     depends_on:
       - backend
     networks:
@@ -17,13 +17,14 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     ports:
-      - "3000:3000"
+      - "0.0.0.0:3001:3001"
     volumes:
       - ./backend/apps:/app/apps
       - ./backend/uploads:/app/uploads
       - ./backend/default-assets:/app/default-assets
       - ./backend/settings.json:/app/settings.json
       - ./backend/homelab.db:/app/homelab.db
+      - /var/run/docker.sock:/var/run/docker.sock
     networks:
       - homalab-network
     environment:

@@ -1,4 +1,4 @@
-FROM node:18-alpine
+FROM node:20-alpine
 
 WORKDIR /app
 
@@ -12,7 +12,7 @@ RUN npm install
 COPY . .
 
 # Exponer el puerto
-EXPOSE 3000
+EXPOSE 3001
 
 # Comando por defecto
 CMD ["npm", "start"]
