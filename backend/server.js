@@ -157,7 +157,7 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ 
   storage,
-  limits: { fileSize: 10 * 1024 * 1024 } // Límite 10MB
+  limits: { fileSize: 20 * 1024 * 1024 } // Límite 20MB
 });
 
 // Initialize Socket.io with CORS supporting our local Vite frontend
